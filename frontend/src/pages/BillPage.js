@@ -32,11 +32,11 @@ function BillPage() {
     try {
       const payload = { customerName, items: cart, totalAmount, method, specialNote };
 
-      const res = await axios.post(
-        "http://localhost:5000/api/orders/confirm-payment",
-        payload
-      );
+      const API_BASE_URL = window.location.hostname === "localhost" 
+  ? "http://localhost:5000" 
+  : "https://dine-tech-iyqs.vercel.app"; // Your Backend URL
 
+await axios.post(`${API_BASE_URL}/api/orders/confirm-payment`, paymentData);
       localStorage.setItem("latestOrderId", res.data.order._id);
 
       localStorage.removeItem("pendingCart");
