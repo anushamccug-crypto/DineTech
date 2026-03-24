@@ -32,11 +32,14 @@ function BillPage() {
     try {
       const payload = { customerName, items: cart, totalAmount, method, specialNote };
 
+      // ✅ FIX: Dynamic URL to handle Production vs Localhost
       const API_BASE_URL = window.location.hostname === "localhost" 
-  ? "http://localhost:5000" 
-  : "https://dine-tech-iyqs.vercel.app"; // Your Backend URL
+        ? "http://localhost:5000" 
+        : "https://dine-tech-iyqs.vercel.app"; 
 
-await axios.post(`${API_BASE_URL}/api/orders/confirm-payment`, paymentData);
+      // ✅ FIX: Use 'payload' instead of 'paymentData'
+      const res = await axios.post(`${API_BASE_URL}/api/orders/confirm-payment`, payload);
+      
       localStorage.setItem("latestOrderId", res.data.order._id);
 
       localStorage.removeItem("pendingCart");
@@ -52,8 +55,8 @@ await axios.post(`${API_BASE_URL}/api/orders/confirm-payment`, paymentData);
       }, 2000);
 
     } catch (error) {
-      console.error(error);
-      alert("❌ Order failed after payment");
+      console.error("Order Error:", error);
+      alert("❌ Order failed after payment. Please check console for details.");
       orderCreatedRef.current = false;
     }
   };
@@ -96,21 +99,16 @@ await axios.post(`${API_BASE_URL}/api/orders/confirm-payment`, paymentData);
         background: "linear-gradient(135deg, #a83aed 0%, #a83aed 60%, #ec4899 100%)"
       }}
     >
-
-      {/* PAYMENT CARD */}
       <div
         className="w-full max-w-xl p-8 rounded-3xl shadow-2xl animate-float"
         style={{
           background: "linear-gradient(135deg, #fbf4ff)"
         }}
       >
-
-        {/* HEADING */}
         <h2 className="text-3xl font-bold text-center text-purple-700 mb-8">
           PAYMENT
         </h2>
 
-        {/* CUSTOMER */}
         <div className="flex justify-between text-base mb-5">
           <span className="font-semibold text-gray-600">Customer</span>
           <span className="font-medium text-gray-800">{customerName}</span>
@@ -118,13 +116,11 @@ await axios.post(`${API_BASE_URL}/api/orders/confirm-payment`, paymentData);
 
         <hr className="mb-5"/>
 
-        {/* ITEMS */}
         <div className="space-y-3">
           {cart.map((item) => (
             <div
               key={item.dishId}
-              className="flex justify-between items-center
-              bg-white px-4 py-3 rounded-xl shadow-sm"
+              className="flex justify-between items-center bg-white px-4 py-3 rounded-xl shadow-sm"
             >
               <div>
                 <p className="font-semibold text-gray-800">{item.name}</p>
@@ -132,7 +128,6 @@ await axios.post(`${API_BASE_URL}/api/orders/confirm-payment`, paymentData);
                   ₹{item.price} × {item.quantity}
                 </p>
               </div>
-
               <p className="font-bold text-purple-700">
                 ₹ {item.price * item.quantity}
               </p>
@@ -142,7 +137,6 @@ await axios.post(`${API_BASE_URL}/api/orders/confirm-payment`, paymentData);
 
         <hr className="my-6"/>
 
-        {/* TOTAL */}
         <div className="flex justify-between items-center text-xl font-bold text-purple-700">
           <span>Total</span>
           <span>₹ {totalAmount}</span>
@@ -150,18 +144,15 @@ await axios.post(`${API_BASE_URL}/api/orders/confirm-payment`, paymentData);
 
         <hr className="my-6"/>
 
-        {/* SPECIAL NOTE */}
         <div className="mb-6">
           <h4 className="font-semibold text-gray-700 mb-2">
             Add Special Instructions for the Chef
           </h4>
-
           <textarea
             placeholder="Example: Less oil, no onion, less spicy..."
             value={specialNote}
             onChange={(e) => setSpecialNote(e.target.value)}
-            className="w-full border rounded-xl p-3
-            focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-purple-400"
           />
         </div>
 
@@ -170,98 +161,64 @@ await axios.post(`${API_BASE_URL}/api/orders/confirm-payment`, paymentData);
             <h3 className="font-semibold mb-3 text-gray-700">
               Select Payment Method
             </h3>
-
             <div className="flex gap-4">
-
               <button
                 onClick={payCash}
                 disabled={loading}
-                className="flex-1 py-3 rounded-xl text-white font-bold
-                bg-green-500 hover:bg-green-600 transition"
+                className="flex-1 py-3 rounded-xl text-white font-bold bg-green-500 hover:bg-green-600 transition"
               >
                 {loading ? "Processing..." : "💵 Pay Cash"}
               </button>
-
               <button
                 onClick={() => {
                   setShowQR(true);
                   setTimer(10);
                 }}
-                className="flex-1 py-3 rounded-xl text-white font-bold
-                bg-purple-600 hover:bg-purple-700 transition"
+                className="flex-1 py-3 rounded-xl text-white font-bold bg-purple-600 hover:bg-purple-700 transition"
               >
                 📱 Pay QR
               </button>
-
             </div>
           </>
         )}
 
-        {/* QR SECTION */}
         {showQR && !paymentSuccess && (
           <div className="text-center mt-6">
-
-            <h4 className="font-semibold text-gray-700">
-              Scan QR to Pay
-            </h4>
-
+            <h4 className="font-semibold text-gray-700">Scan QR to Pay</h4>
             <img
               src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=RestaurantPayment"
               alt="QR"
               className="mx-auto my-4"
             />
-
-            <p className="font-bold text-purple-700">
-              QR expires in {timer}s
-            </p>
-
+            <p className="font-bold text-purple-700">QR expires in {timer}s</p>
           </div>
         )}
 
-        {/* SUCCESS */}
         {paymentSuccess && (
           <div className="text-center mt-6 p-6 rounded-xl bg-green-100 animate-burst">
-
-            <h3 className="text-green-700 text-2xl font-bold">
-              🎉 Payment Successful
-            </h3>
-
-            <p className="text-green-700 mt-2">
-              Redirecting to your receipt...
-            </p>
-
+            <h3 className="text-green-700 text-2xl font-bold">🎉 Payment Successful</h3>
+            <p className="text-green-700 mt-2">Redirecting to your receipt...</p>
           </div>
         )}
-
       </div>
 
-      {/* ANIMATIONS */}
       <style>
         {`
         @keyframes float {
           from { transform: translateY(0px); }
           to { transform: translateY(-10px); }
         }
-
-        .animate-float{
-          animation: float 4s ease-in-out infinite alternate;
-        }
-
+        .animate-float{ animation: float 4s ease-in-out infinite alternate; }
         @keyframes burst {
           0% { transform: scale(0.7); opacity:0 }
           60% { transform: scale(1.1); opacity:1 }
           100% { transform: scale(1); }
         }
-
-        .animate-burst{
-          animation: burst 0.6s ease;
-        }
+        .animate-burst{ animation: burst 0.6s ease; }
         `}
       </style>
-
     </div>
   );
 }
 
 export default BillPage;
-
