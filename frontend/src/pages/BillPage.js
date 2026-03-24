@@ -30,33 +30,44 @@ function BillPage() {
     orderCreatedRef.current = true;
 
     try {
-      const payload = { customerName, items: cart, totalAmount, method, specialNote };
+      const payload = { 
+        customerName, 
+        items: cart, 
+        totalAmount, 
+        method, 
+        specialNote 
+      };
 
-      // ✅ FIX: Dynamic URL to handle Production vs Localhost
+      // ✅ DYNAMIC URL: Works on both Localhost and Vercel
       const API_BASE_URL = window.location.hostname === "localhost" 
         ? "http://localhost:5000" 
         : "https://dine-tech-iyqs.vercel.app"; 
 
-      // ✅ FIX: Use 'payload' instead of 'paymentData'
+      // ✅ POST REQUEST: Sends data to the backend
       const res = await axios.post(`${API_BASE_URL}/api/orders/confirm-payment`, payload);
       
-      localStorage.setItem("latestOrderId", res.data.order._id);
+      // ✅ REDIRECT LOGIC: Checks for the new Order ID and navigates
+      if (res.data && res.data.order) {
+        localStorage.setItem("latestOrderId", res.data.order._id);
 
-      localStorage.removeItem("pendingCart");
-      localStorage.removeItem("pendingCustomer");
-      localStorage.removeItem("pendingTotal");
+        // ✅ CLEANUP: Removes temporary data only after success
+        localStorage.removeItem("pendingCart");
+        localStorage.removeItem("pendingCustomer");
+        localStorage.removeItem("pendingTotal");
 
-      setPaymentSuccess(true);
-      setShowQR(false);
-      setTimer(10);
+        setPaymentSuccess(true);
+        setShowQR(false);
+        setTimer(10);
 
-      setTimeout(() => {
-        navigate(`/receipt/${res.data.order._id}`);
-      }, 2000);
+        // ✅ NAVIGATION: Redirects to the Receipt page
+        setTimeout(() => {
+          navigate(`/receipt/${res.data.order._id}`);
+        }, 2000);
+      }
 
     } catch (error) {
       console.error("Order Error:", error);
-      alert("❌ Order failed after payment. Please check console for details.");
+      alert("❌ Order failed after payment. Please check your connection.");
       orderCreatedRef.current = false;
     }
   };
@@ -100,10 +111,7 @@ function BillPage() {
       }}
     >
       <div
-        className="w-full max-w-xl p-8 rounded-3xl shadow-2xl animate-float"
-        style={{
-          background: "linear-gradient(135deg, #fbf4ff)"
-        }}
+        className="w-full max-w-xl p-8 rounded-3xl shadow-2xl animate-float bg-white"
       >
         <h2 className="text-3xl font-bold text-center text-purple-700 mb-8">
           PAYMENT
@@ -120,7 +128,7 @@ function BillPage() {
           {cart.map((item) => (
             <div
               key={item.dishId}
-              className="flex justify-between items-center bg-white px-4 py-3 rounded-xl shadow-sm"
+              className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-xl shadow-sm"
             >
               <div>
                 <p className="font-semibold text-gray-800">{item.name}</p>
@@ -165,7 +173,7 @@ function BillPage() {
               <button
                 onClick={payCash}
                 disabled={loading}
-                className="flex-1 py-3 rounded-xl text-white font-bold bg-green-500 hover:bg-green-600 transition"
+                className="flex-1 py-3 rounded-xl text-white font-bold bg-green-500 hover:bg-green-600 transition shadow-lg"
               >
                 {loading ? "Processing..." : "💵 Pay Cash"}
               </button>
@@ -174,7 +182,7 @@ function BillPage() {
                   setShowQR(true);
                   setTimer(10);
                 }}
-                className="flex-1 py-3 rounded-xl text-white font-bold bg-purple-600 hover:bg-purple-700 transition"
+                className="flex-1 py-3 rounded-xl text-white font-bold bg-purple-600 hover:bg-purple-700 transition shadow-lg"
               >
                 📱 Pay QR
               </button>
@@ -188,16 +196,16 @@ function BillPage() {
             <img
               src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=RestaurantPayment"
               alt="QR"
-              className="mx-auto my-4"
+              className="mx-auto my-4 shadow-sm"
             />
             <p className="font-bold text-purple-700">QR expires in {timer}s</p>
           </div>
         )}
 
         {paymentSuccess && (
-          <div className="text-center mt-6 p-6 rounded-xl bg-green-100 animate-burst">
+          <div className="text-center mt-6 p-6 rounded-xl bg-green-100 animate-burst border border-green-200">
             <h3 className="text-green-700 text-2xl font-bold">🎉 Payment Successful</h3>
-            <p className="text-green-700 mt-2">Redirecting to your receipt...</p>
+            <p className="text-green-600 mt-2">Redirecting to your receipt...</p>
           </div>
         )}
       </div>
