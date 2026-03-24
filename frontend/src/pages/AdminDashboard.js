@@ -11,7 +11,7 @@ function AdminDashboard() {
       {/* NAVBAR - Original Structure with New Colors */}
       <nav className="bg-[#5D534A] text-[#FDF8F2] p-4 flex justify-between items-center shadow-lg">
         <h1 className="text-2xl font-bold tracking-tight">
-          TASTE <span className="text-[#D4A373]">CRAFTS</span> Admin
+          DINE<span className="text-[#D4A373]">TECH</span> Admin
         </h1>
 
         <div className="flex gap-2">

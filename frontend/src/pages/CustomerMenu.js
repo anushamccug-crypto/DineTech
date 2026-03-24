@@ -178,7 +178,7 @@ function CustomerMenu() {
           {/* TOP ROW: Brand and Search */}
           <div className="flex flex-col lg:flex-row items-center justify-between px-6 py-3 gap-4 border-b border-gray-100">
             <div className="flex items-center gap-4">
-              <h1 className="text-2xl md:text-3xl font-serif italic text-[#5D534A]">TasteCraft</h1>
+              <h1 className="text-2xl md:text-3xl font-serif italic text-[#5D534A]">DineTech</h1>
               <div className="hidden md:block w-[1px] h-6 bg-gray-200 mx-2"></div>
               <div className="flex-1 flex items-center gap-2 bg-[#FAF7F2] px-4 py-2 rounded-2xl border border-[#F1E9E0] min-w-[200px]">
                 <input type="text" placeholder="Search menu..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="bg-transparent text-[11px] font-medium outline-none w-full" />
