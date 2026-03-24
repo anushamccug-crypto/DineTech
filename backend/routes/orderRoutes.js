@@ -11,59 +11,35 @@ ORDER CREATED ONLY AFTER PAYMENT SUCCESS
 // Confirm Payment + Create Order
 router.post("/confirm-payment", async (req, res) => {
   try {
-    const { customerName, items, totalAmount, method, specialNote } = req.body;
+    const { customerName, tableNumber, items, totalAmount, method, specialNote } = req.body;
 
     if (!customerName || !items || items.length === 0 || !totalAmount) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // Intelligent Prep Time Calculation
-
-    let estimatedPrepTime = 0;
-    let totalQuantity = 0;
-
-    items.forEach((item) => {
-      totalQuantity += item.quantity;
-
-      if (item.type === "non-veg") {
-        estimatedPrepTime += 8 * item.quantity;
-      } else {
-        estimatedPrepTime += 5 * item.quantity;
-      }
-    });
-
-    if (totalQuantity > 4) {
-      estimatedPrepTime += 5;
-    }
-
-    if (estimatedPrepTime === 0) {
-      estimatedPrepTime = 10;
-    }
+    // Logic: If it's Razorpay or QR, mark as Success. If Cash, leave as Pending.
+    const isPaid = (method === "RAZORPAY" || method === "QR");
 
     const newOrder = new Order({
       customerName,
+      tableNumber: tableNumber || "N/A",
       items,
       totalAmount,
-      specialNote,
-      estimatedPrepTime,
+      specialNote: specialNote || "",
+      estimatedPrepTime: 15, // Default 15 mins
       status: "PLACED",
-
       payment: {
         method: method || "CASH",
-        status: "SUCCESS",
-        paidAt: new Date(),
+        status: isPaid ? "SUCCESS" : "PENDING",
+        paidAt: isPaid ? new Date() : null,
       },
     });
 
     const savedOrder = await newOrder.save();
-
-    res.status(201).json({
-      message: "Payment successful, order confirmed!",
-      order: savedOrder,
-    });
+    res.status(201).json({ message: "Order confirmed!", order: savedOrder });
 
   } catch (error) {
-    console.error("Confirm Payment Error:", error);
+    console.error("Save Error:", error.message);
     res.status(500).json({ message: error.message });
   }
 });
@@ -94,6 +70,7 @@ router.get("/today", async (req, res) => {
   }
 });
 
+
 /*
 ====================================================
 GET ORDER HISTORY (OLDER ORDERS)
@@ -117,6 +94,7 @@ router.get("/history", async (req, res) => {
   }
 });
 
+
 /*
 ====================================================
 GET ALL ORDERS
@@ -134,6 +112,7 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
 
 /*
 ====================================================
@@ -156,6 +135,7 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
 
 /*
 ====================================================
@@ -184,5 +164,6 @@ router.put("/:id/status", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
 
 module.exports = router;
