@@ -20,9 +20,9 @@ const app = express();
 app.use(express.json());
 
 app.use(cors({
-  origin: "*", 
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true
+  origin: ["http://localhost:3000", "https://dine-tech-tau.vercel.app"], // ⭐ Paste your FRONTEND link here
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE"]
 }));
 
 /* ✅ Routes */

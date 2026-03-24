@@ -7,7 +7,7 @@ function CustomerMenu() {
   // ================= API CONFIG =================
   const API_BASE_URL = window.location.hostname === "localhost" 
     ? "http://localhost:5000" 
-    : "https://your-backend-vercel-url.vercel.app"; // Update this with your actual Vercel URL
+    : "https://dine-tech-iyqs.vercel.app";; // Update this with your actual Vercel URL
 
   // ================= STATES =================
   const [dishes, setDishes] = useState([]);
