@@ -13,7 +13,12 @@ function Receipt() {
   useEffect(() => {
     const fetchBill = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/orders/${billId}`);
+        // ✅ DYNAMIC URL: Works on both Localhost and Vercel
+        const API_BASE_URL = window.location.hostname === "localhost" 
+          ? "http://localhost:5000" 
+          : "https://dine-tech-iyqs.vercel.app";
+
+        const res = await axios.get(`${API_BASE_URL}/api/orders/${billId}`);
         setBill(res.data);
 
         localStorage.setItem("latestBill", JSON.stringify({
@@ -21,6 +26,7 @@ function Receipt() {
           orderId: res.data._id
         }));
 
+        // ✅ RETAINED: Automatic redirect to dashboard after 5 seconds
         setTimeout(() => {
           navigate("/customer-dashboard");
         }, 5000);
@@ -30,7 +36,9 @@ function Receipt() {
       }
     };
 
-    fetchBill();
+    if (billId) {
+      fetchBill();
+    }
   }, [billId, navigate]);
 
   const downloadPDF = async () => {
@@ -64,7 +72,7 @@ function Receipt() {
     );
   }
 
-  const subtotal = bill.totalAmount;
+  const subtotal = bill.totalAmount || 0;
   const gstRate = 5;
   const gstAmount = (subtotal * gstRate) / 100;
   const grandTotal = subtotal + gstAmount;
@@ -82,8 +90,6 @@ function Receipt() {
         background: "linear-gradient(135deg,#7c3aed,#a855f7,#ec4899)"
       }}
     >
-
-      {/* RECEIPT CARD */}
       <div
         ref={receiptRef}
         style={{
@@ -96,8 +102,6 @@ function Receipt() {
           width: "100%"
         }}
       >
-
-        {/* Header */}
         <div style={{ textAlign: "center" }}>
           <h1 style={{ margin: 0 }}>DineTech</h1>
           <p style={{ margin: 0 }}>GSTIN: 29ABCDE1234F1Z5</p>
@@ -107,18 +111,16 @@ function Receipt() {
 
         <hr />
 
-        {/* Invoice Info */}
         <div style={{ fontSize: "14px" }}>
           <p><strong>Invoice No:</strong> DT-{bill._id.slice(-6)}</p>
           <p><strong>Order ID:</strong> {bill._id}</p>
           <p><strong>Date:</strong> {new Date(bill.createdAt).toLocaleString()}</p>
           <p><strong>Customer:</strong> {bill.customerName}</p>
-          <p><strong>Payment Method:</strong> {bill.payment?.method}</p>
+          <p><strong>Payment Method:</strong> {bill.method || "N/A"}</p>
         </div>
 
         <hr />
 
-        {/* Items Table */}
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
           <thead>
             <tr>
@@ -128,10 +130,9 @@ function Receipt() {
               <th style={{ textAlign: "right" }}>Amount</th>
             </tr>
           </thead>
-
           <tbody>
-            {bill.items.map((item) => (
-              <tr key={item._id}>
+            {bill.items && bill.items.map((item) => (
+              <tr key={item._id || item.dishId}>
                 <td>{item.name}</td>
                 <td style={{ textAlign: "center" }}>{item.quantity}</td>
                 <td style={{ textAlign: "right" }}>₹ {item.price}</td>
@@ -143,7 +144,6 @@ function Receipt() {
 
         <hr />
 
-        {/* Totals */}
         <div style={{ textAlign: "right", fontSize: "14px" }}>
           <p>Subtotal: ₹ {subtotal.toFixed(2)}</p>
           <p>GST ({gstRate}%): ₹ {gstAmount.toFixed(2)}</p>
@@ -152,30 +152,25 @@ function Receipt() {
 
         <hr />
 
-        {/* Payment Status */}
         <div style={{ fontSize: "14px" }}>
           <p>
             <strong>Status:</strong>{" "}
-            <span style={{ fontWeight: "bold" }}>
-              {bill.payment?.status}
+            <span style={{ fontWeight: "bold", color: "green" }}>
+              PAID
             </span>
           </p>
         </div>
 
         <hr />
 
-        {/* Footer */}
         <div style={{ textAlign: "center", fontSize: "13px" }}>
           <p>Thank you for dining with DineTech!</p>
-          <p>Goods once sold will not be taken back.</p>
           <p>This is a computer-generated invoice.</p>
           <br />
           <p>Authorized Signature</p>
         </div>
-
       </div>
 
-      {/* Buttons */}
       <div
         style={{
           marginTop: "20px",
@@ -184,7 +179,6 @@ function Receipt() {
           justifyContent: "center"
         }}
       >
-
         <button
           onClick={() => window.print()}
           style={{
@@ -212,9 +206,7 @@ function Receipt() {
         >
           Download PDF
         </button>
-
       </div>
-
     </div>
   );
 }
