@@ -3,71 +3,55 @@ import DashboardAnalytics from "./DashboardAnalytics";
 import InventorySection from "./InventorySection";
 import KitchenSection from "./KitchenSection";
 
-// ✅ Base URL logic to ensure data loads on Vercel AND localhost
-const API_BASE_URL = window.location.hostname === "localhost" 
-  ? "http://localhost:5000" 
-  : "https://dine-tech-iyqs.vercel.app";
-
 function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState("dashboard");
 
-const [activeTab,setActiveTab] = useState("dashboard");
+  return (
+    <div className="min-h-screen bg-[#FDF8F2] text-[#5D534A]">
+      {/* NAVBAR - Original Structure with New Colors */}
+      <nav className="bg-[#5D534A] text-[#FDF8F2] p-4 flex justify-between items-center shadow-lg">
+        <h1 className="text-2xl font-bold tracking-tight">
+          TASTE <span className="text-[#D4A373]">CRAFTS</span> Admin
+        </h1>
 
-return (
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setActiveTab("dashboard")}
+            className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+              activeTab === "dashboard" ? "bg-[#D4A373] text-[#5D534A]" : "hover:bg-white/10"
+            }`}
+          >
+            Dashboard
+          </button>
 
-<div className="min-h-screen bg-gray-100">
+          <button 
+            onClick={() => setActiveTab("inventory")}
+            className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+              activeTab === "inventory" ? "bg-[#D4A373] text-[#5D534A]" : "hover:bg-white/10"
+            }`}
+          >
+            Inventory
+          </button>
 
-{/* NAVBAR */}
+          <button 
+            onClick={() => setActiveTab("kitchen")}
+            className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+              activeTab === "kitchen" ? "bg-[#D4A373] text-[#5D534A]" : "hover:bg-white/10"
+            }`}
+          >
+            Kitchen
+          </button>
+        </div>
+      </nav>
 
-<nav className="bg-gradient-to-r from-purple-700 to-pink-500 text-white p-4 flex justify-between">
-
-<h1 className="text-2xl font-bold">
-Taste Crafts Admin
-</h1>
-
-<div className="space-x-4">
-
-<button 
-  className={`px-3 py-1 rounded ${activeTab === "dashboard" ? "bg-white text-purple-700 font-bold" : ""}`}
-  onClick={()=>setActiveTab("dashboard")}
->
-Dashboard
-</button>
-
-<button 
-  className={`px-3 py-1 rounded ${activeTab === "inventory" ? "bg-white text-purple-700 font-bold" : ""}`}
-  onClick={()=>setActiveTab("inventory")}
->
-Inventory
-</button>
-
-<button 
-  className={`px-3 py-1 rounded ${activeTab === "kitchen" ? "bg-white text-purple-700 font-bold" : ""}`}
-  onClick={()=>setActiveTab("kitchen")}
->
-Kitchen
-</button>
-
-</div>
-
-</nav>
-
-<div className="p-6">
-
-{/* IMPORTANT: DashboardAnalytics, InventorySection, and KitchenSection 
-  now use the API_BASE_URL internally to fetch live data.
-*/}
-{activeTab === "dashboard" && <DashboardAnalytics/>}
-
-{activeTab === "inventory" && <InventorySection/>}
-
-{activeTab === "kitchen" && <KitchenSection/>}
-
-</div>
-
-</div>
-
-);
-
+      {/* Main Content Area */}
+      <div className="p-6 max-w-7xl mx-auto">
+        {activeTab === "dashboard" && <DashboardAnalytics />}
+        {activeTab === "inventory" && <InventorySection />}
+        {activeTab === "kitchen" && <KitchenSection />}
+      </div>
+    </div>
+  );
 }
 
 export default AdminDashboard;
