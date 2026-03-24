@@ -4,6 +4,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
+// ✅ DYNAMIC URL: Works on both Localhost and Vercel
+const API_BASE_URL = window.location.hostname === "localhost" 
+  ? "http://localhost:5000" 
+  : "https://dine-tech-iyqs.vercel.app";
+
 function Receipt() {
   const { billId } = useParams();
   const [bill, setBill] = useState(null);
@@ -13,11 +18,7 @@ function Receipt() {
   useEffect(() => {
     const fetchBill = async () => {
       try {
-        // ✅ DYNAMIC URL: Works on both Localhost and Vercel
-        const API_BASE_URL = window.location.hostname === "localhost" 
-          ? "http://localhost:5000" 
-          : "https://dine-tech-iyqs.vercel.app";
-
+        // ✅ Using dynamic API_BASE_URL
         const res = await axios.get(`${API_BASE_URL}/api/orders/${billId}`);
         setBill(res.data);
 
@@ -26,187 +27,171 @@ function Receipt() {
           orderId: res.data._id
         }));
 
-        // ✅ RETAINED: Automatic redirect to dashboard after 5 seconds
+        // Navigate back after 8 seconds
         setTimeout(() => {
           navigate("/customer-dashboard");
-        }, 5000);
+        }, 8000);
 
       } catch (error) {
         console.error("Failed to fetch bill", error);
       }
     };
-
-    if (billId) {
-      fetchBill();
-    }
+    if (billId) fetchBill();
   }, [billId, navigate]);
 
   const downloadPDF = async () => {
     const input = receiptRef.current;
     const canvas = await html2canvas(input, { scale: 2 });
     const imgData = canvas.toDataURL("image/png");
-
     const pdf = new jsPDF("p", "mm", "a4");
     const imgWidth = 190;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
     pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
-    pdf.save(`DineTech-Invoice-${bill._id}.pdf`);
+    pdf.save(`DineTech-Invoice-${bill._id.slice(-6)}.pdf`);
   };
 
   if (!bill) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "linear-gradient(135deg,#7c3aed,#a855f7,#ec4899)",
-          color: "white",
-          fontSize: "20px"
-        }}
-      >
-        Loading receipt...
+      <div className="min-h-screen flex items-center justify-center bg-[#FDF8F2] text-[#5D534A] font-serif italic">
+        <div className="animate-pulse">Loading digital receipt...</div>
       </div>
     );
   }
 
-  const subtotal = bill.totalAmount || 0;
+  const subtotal = bill.totalAmount;
   const gstRate = 5;
   const gstAmount = (subtotal * gstRate) / 100;
   const grandTotal = subtotal + gstAmount;
 
+  // Use optional chaining to safely check payment method
+  const isCash = bill.method === "CASH" || bill.payment?.method === "CASH";
+  const statusText = isCash ? "PAYMENT PENDING AT COUNTER" : "PAYMENT SUCCESSFUL";
+  const statusColor = isCash ? "#D4A373" : "#2D6A4F";
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "30px",
-        fontFamily: "Courier New, monospace",
-        background: "linear-gradient(135deg,#7c3aed,#a855f7,#ec4899)"
-      }}
-    >
-      <div
-        ref={receiptRef}
-        style={{
-          padding: "25px",
-          borderRadius: "12px",
-          border: "1px solid #ddd",
-          background: "#fff",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
-          maxWidth: "750px",
-          width: "100%"
-        }}
+    <div className="min-h-screen bg-[#FDF8F2] py-10 px-4 flex flex-col items-center relative overflow-hidden font-sans">
+      
+      {/* AMBIENT BACKGROUND */}
+      <div className="absolute top-[-10%] left-[-5%] w-[70%] h-[50%] bg-[#E6F3EF] rounded-full blur-[120px] opacity-40 z-0"></div>
+      <div className="absolute bottom-[-10%] right-[-5%] w-[60%] h-[50%] bg-[#FFF0F0] rounded-full blur-[120px] opacity-40 z-0"></div>
+
+      {/* RECEIPT CARD */}
+      <div 
+        ref={receiptRef} 
+        className="relative z-10 w-full max-w-xl bg-white p-8 md:p-12 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border-[3px] border-[#5D534A] text-[#5D534A]"
       >
-        <div style={{ textAlign: "center" }}>
-          <h1 style={{ margin: 0 }}>DineTech</h1>
-          <p style={{ margin: 0 }}>GSTIN: 29ABCDE1234F1Z5</p>
-          <p style={{ margin: 0 }}>123 Food Street, Bangalore, India</p>
-          <p style={{ margin: 0 }}>Phone: +91 98765 43210</p>
+        {/* LOGO & HEADER */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-serif italic font-bold tracking-tighter mb-1">DineTech</h1>
+          <p className="text-[9px] uppercase tracking-[0.3em] text-[#D4A373] font-black">Digital Invoice</p>
+          <div className="mt-4 text-[10px] text-gray-400 uppercase tracking-widest font-bold">
+            <p>GSTIN: 29ABCDE1234F1Z5</p>
+            <p>123 Food Street, Bangalore, India</p>
+          </div>
         </div>
 
-        <hr />
+        <div className="border-t border-dashed border-[#F1E9E0] my-6"></div>
 
-        <div style={{ fontSize: "14px" }}>
-          <p><strong>Invoice No:</strong> DT-{bill._id.slice(-6)}</p>
-          <p><strong>Order ID:</strong> {bill._id}</p>
-          <p><strong>Date:</strong> {new Date(bill.createdAt).toLocaleString()}</p>
-          <p><strong>Customer:</strong> {bill.customerName}</p>
-          <p><strong>Payment Method:</strong> {bill.method || "N/A"}</p>
+        {/* INFO GRID */}
+        <div className="grid grid-cols-2 gap-4 text-[11px] font-bold uppercase tracking-tight">
+          <div className="space-y-2">
+            <p><span className="text-gray-400">Invoice:</span> DT-{bill._id.slice(-6)}</p>
+            <p><span className="text-gray-400">Guest:</span> {bill.customerName}</p>
+            <p><span className="text-gray-400">Table:</span> {bill.tableNumber || "N/A"}</p>
+          </div>
+          <div className="space-y-2 text-right">
+            <p><span className="text-gray-400">Date:</span> {new Date(bill.createdAt).toLocaleDateString()}</p>
+            <p><span className="text-gray-400">Time:</span> {new Date(bill.createdAt).toLocaleTimeString()}</p>
+            <p><span className="text-gray-400">Method:</span> {bill.method || bill.payment?.method}</p>
+          </div>
         </div>
 
-        <hr />
+        <div className="border-t border-dashed border-[#F1E9E0] my-6"></div>
 
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+        {/* ITEMS TABLE */}
+        <table className="w-full text-sm mb-6">
           <thead>
-            <tr>
-              <th style={{ textAlign: "left" }}>Item</th>
-              <th style={{ textAlign: "center" }}>Qty</th>
-              <th style={{ textAlign: "right" }}>Rate</th>
-              <th style={{ textAlign: "right" }}>Amount</th>
+            <tr className="text-[10px] uppercase tracking-widest text-gray-400 border-b border-[#F1E9E0]">
+              <th className="text-left py-2 font-black">Item</th>
+              <th className="text-center py-2 font-black">Qty</th>
+              <th className="text-right py-2 font-black">Amount</th>
             </tr>
           </thead>
-          <tbody>
-            {bill.items && bill.items.map((item) => (
-              <tr key={item._id || item.dishId}>
-                <td>{item.name}</td>
-                <td style={{ textAlign: "center" }}>{item.quantity}</td>
-                <td style={{ textAlign: "right" }}>₹ {item.price}</td>
-                <td style={{ textAlign: "right" }}>₹ {item.price * item.quantity}</td>
+          <tbody className="font-serif italic text-lg">
+            {bill.items.map((item) => (
+              <tr key={item._id} className="border-b border-[#FAF7F2]">
+                <td className="py-3 text-[#4A423B]">{item.name}</td>
+                <td className="text-center text-[#D4A373] font-sans font-bold text-sm">{item.quantity}</td>
+                <td className="text-right text-[#5D534A]">₹{item.price * item.quantity}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        <hr />
-
-        <div style={{ textAlign: "right", fontSize: "14px" }}>
-          <p>Subtotal: ₹ {subtotal.toFixed(2)}</p>
-          <p>GST ({gstRate}%): ₹ {gstAmount.toFixed(2)}</p>
-          <h3>Grand Total: ₹ {grandTotal.toFixed(2)}</h3>
+        {/* TOTALS */}
+        <div className="flex flex-col items-end space-y-2 mb-8">
+          <div className="flex justify-between w-40 text-[11px] font-bold text-gray-400">
+            <span>Subtotal</span>
+            <span>₹{subtotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between w-40 text-[11px] font-bold text-gray-400">
+            <span>GST ({gstRate}%)</span>
+            <span>₹{gstAmount.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between w-full pt-4 border-t border-[#F1E9E0]">
+             <span className="text-[10px] font-black uppercase tracking-[0.2em] self-center">Grand Total</span>
+             <span className="text-4xl font-serif italic font-bold">₹{grandTotal.toFixed(2)}</span>
+          </div>
         </div>
 
-        <hr />
-
-        <div style={{ fontSize: "14px" }}>
-          <p>
-            <strong>Status:</strong>{" "}
-            <span style={{ fontWeight: "bold", color: "green" }}>
-              PAID
-            </span>
+        {/* STATUS BOX */}
+        <div 
+          className="text-center p-4 rounded-2xl border-2 mb-8"
+          style={{ borderColor: statusColor, backgroundColor: `${statusColor}08` }}
+        >
+          <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: statusColor }}>
+            {statusText}
           </p>
+          {isCash && (
+            <p className="text-[9px] mt-2 text-gray-400 uppercase font-bold leading-relaxed">
+              Kindly settle your bill at the counter.<br/>Present this digital invoice for validation.
+            </p>
+          )}
         </div>
 
-        <hr />
-
-        <div style={{ textAlign: "center", fontSize: "13px" }}>
-          <p>Thank you for dining with DineTech!</p>
-          <p>This is a computer-generated invoice.</p>
-          <br />
-          <p>Authorized Signature</p>
+        <div className="text-center text-[10px] text-gray-400 uppercase tracking-widest font-bold">
+          <p>Thank you for choosing DineTech</p>
+          <p className="mt-4 opacity-30 italic">-------------------------</p>
+          <p className="mt-2">Authorized Signature</p>
         </div>
       </div>
 
-      <div
-        style={{
-          marginTop: "20px",
-          display: "flex",
-          gap: "10px",
-          justifyContent: "center"
-        }}
-      >
-        <button
-          onClick={() => window.print()}
-          style={{
-            padding: "10px 20px",
-            background: "linear-gradient(90deg,#7c3aed,#ec4899)",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer"
-          }}
+      {/* ACTION BUTTONS */}
+      <div className="relative z-10 mt-8 flex gap-4">
+        <button 
+          onClick={() => window.print()} 
+          className="px-8 py-4 bg-[#5D534A] text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-[#4A423B] transition-all shadow-xl active:scale-95"
         >
-          Print
+          Print Receipt
         </button>
-
-        <button
-          onClick={downloadPDF}
-          style={{
-            padding: "10px 20px",
-            background: "green",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer"
-          }}
+        <button 
+          onClick={downloadPDF} 
+          className="px-8 py-4 bg-[#D4A373] text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-[#5D534A] transition-all shadow-xl active:scale-95"
         >
           Download PDF
         </button>
       </div>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        .font-sans { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-serif { font-family: 'Playfair Display', serif; }
+        @media print {
+          button { display: none; }
+          .min-h-screen { padding: 0; background: white; }
+          .shadow-[0_20px_50px_rgba(0,0,0,0.05)] { box-shadow: none; }
+        }
+      `}</style>
     </div>
   );
 }
