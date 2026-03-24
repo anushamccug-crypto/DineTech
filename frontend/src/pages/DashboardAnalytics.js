@@ -25,6 +25,11 @@ ChartJS.register(
   Legend
 );
 
+// ✅ Dynamic URL logic
+const API_BASE_URL = window.location.hostname === "localhost" 
+  ? "http://localhost:5000" 
+  : "https://dine-tech-iyqs.vercel.app";
+
 function DashboardAnalytics() {
   const [orders, setOrders] = useState([]);
   const [dishes, setDishes] = useState([]);
@@ -33,8 +38,9 @@ function DashboardAnalytics() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const ordersRes = await axios.get("http://localhost:5000/api/orders");
-        const dishesRes = await axios.get("http://localhost:5000/api/dishes");
+        // ✅ Replaced localhost with dynamic base URL
+        const ordersRes = await axios.get(`${API_BASE_URL}/api/orders`);
+        const dishesRes = await axios.get(`${API_BASE_URL}/api/dishes`);
         setOrders(ordersRes.data);
         setDishes(dishesRes.data);
       } catch (err) {
@@ -219,8 +225,6 @@ function DashboardAnalytics() {
     "transform transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl";
 
   return (
-
-    
     <div className="space-y-6">
       {/* TODAY PERFORMANCE */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-500 text-white p-8 rounded-2xl shadow-lg">
@@ -280,7 +284,7 @@ function DashboardAnalytics() {
 
         <div className={`${floatingCard} bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-2xl shadow-md`}>
           <h3 className="text-purple-700 font-semibold text-lg mb-4">Sales Trend</h3>
-          <Line data={salesTrendChart} />
+          <li data={salesTrendChart} />
         </div>
       </div>
 

@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
+// ✅ Dynamic URL logic
+const API_BASE_URL = window.location.hostname === "localhost" 
+  ? "http://localhost:5000" 
+  : "https://dine-tech-iyqs.vercel.app";
+
 function InventorySection() {
   const [inventory, setInventory] = useState([]);
 
@@ -8,7 +13,8 @@ function InventorySection() {
   useEffect(() => {
     const fetchInventory = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/inventory");
+        // ✅ Replaced localhost
+        const res = await axios.get(`${API_BASE_URL}/api/inventory`);
         setInventory(res.data);
       } catch (err) {
         console.error("Error fetching inventory:", err);
@@ -29,7 +35,8 @@ function InventorySection() {
   // Update inventory API
   const updateInventory = async (id, quantityAvailable) => {
     try {
-      await axios.put(`http://localhost:5000/api/inventory/${id}`, {
+      // ✅ Replaced localhost
+      await axios.put(`${API_BASE_URL}/api/inventory/${id}`, {
         quantityAvailable,
       });
       alert("✅ Inventory updated successfully");

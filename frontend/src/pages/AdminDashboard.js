@@ -3,6 +3,11 @@ import DashboardAnalytics from "./DashboardAnalytics";
 import InventorySection from "./InventorySection";
 import KitchenSection from "./KitchenSection";
 
+// ✅ Base URL logic to be passed down or used if needed
+const API_BASE_URL = window.location.hostname === "localhost" 
+  ? "http://localhost:5000" 
+  : "https://dine-tech-iyqs.vercel.app";
+
 function AdminDashboard() {
 
 const [activeTab,setActiveTab] = useState("dashboard");
@@ -21,15 +26,24 @@ Taste Crafts Admin
 
 <div className="space-x-4">
 
-<button onClick={()=>setActiveTab("dashboard")}>
+<button 
+  className={`px-3 py-1 rounded ${activeTab === "dashboard" ? "bg-white text-purple-700 font-bold" : ""}`}
+  onClick={()=>setActiveTab("dashboard")}
+>
 Dashboard
 </button>
 
-<button onClick={()=>setActiveTab("inventory")}>
+<button 
+  className={`px-3 py-1 rounded ${activeTab === "inventory" ? "bg-white text-purple-700 font-bold" : ""}`}
+  onClick={()=>setActiveTab("inventory")}
+>
 Inventory
 </button>
 
-<button onClick={()=>setActiveTab("kitchen")}>
+<button 
+  className={`px-3 py-1 rounded ${activeTab === "kitchen" ? "bg-white text-purple-700 font-bold" : ""}`}
+  onClick={()=>setActiveTab("kitchen")}
+>
 Kitchen
 </button>
 
@@ -39,6 +53,9 @@ Kitchen
 
 <div className="p-6">
 
+{/* IMPORTANT: Ensure DashboardAnalytics, InventorySection, and KitchenSection 
+   are updated with the API_BASE_URL constant internally!
+*/}
 {activeTab === "dashboard" && <DashboardAnalytics/>}
 
 {activeTab === "inventory" && <InventorySection/>}

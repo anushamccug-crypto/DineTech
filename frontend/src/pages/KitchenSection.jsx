@@ -1,14 +1,18 @@
-
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+
+// ✅ Dynamic URL logic
+const API_BASE_URL = window.location.hostname === "localhost" 
+  ? "http://localhost:5000" 
+  : "https://dine-tech-iyqs.vercel.app";
 
 function KitchenSection(){
 
 const [updates,setUpdates] = useState([]);
 
 useEffect(()=>{
-
-axios.get("http://localhost:5000/api/admin/kitchen-updates")
+// ✅ Replaced localhost
+axios.get(`${API_BASE_URL}/api/admin/kitchen-updates`)
 .then(res => setUpdates(res.data));
 
 },[]);
