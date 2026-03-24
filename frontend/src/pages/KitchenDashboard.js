@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
+// ✅ Dynamic URL: Works on your laptop AND on Vercel
+const API_BASE_URL = window.location.hostname === "localhost" 
+  ? "http://localhost:5000" 
+  : "https://dine-tech-iyqs.vercel.app";
+
 function KitchenDashboard() {
   const [orders, setOrders] = useState([]);
   const [historyOrders, setHistoryOrders] = useState([]);
@@ -11,7 +16,8 @@ function KitchenDashboard() {
 
   const fetchAllOrders = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/orders");
+      // ✅ Replaced hardcoded localhost with dynamic URL
+      const res = await axios.get(`${API_BASE_URL}/api/orders`);
       const allOrders = res.data;
 
       const today = new Date().toDateString();
@@ -35,7 +41,7 @@ function KitchenDashboard() {
     fetchAllOrders();
 
     let interval;
-    if (activeTab === "history") {
+    if (activeTab === "history" || activeTab === "orders") {
       interval = setInterval(fetchAllOrders, 5000);
     }
 
@@ -44,7 +50,8 @@ function KitchenDashboard() {
 
   const updateStatus = async (id, newStatus) => {
     try {
-      await axios.put(`http://localhost:5000/api/orders/${id}/status`, {
+      // ✅ Replaced hardcoded localhost with dynamic URL
+      await axios.put(`${API_BASE_URL}/api/orders/${id}/status`, {
         status: newStatus,
       });
       fetchAllOrders();
@@ -65,7 +72,8 @@ function KitchenDashboard() {
     }
 
     try {
-      await axios.post("http://localhost:5000/api/admin/kitchen-updates", {
+      // ✅ Replaced hardcoded localhost with dynamic URL
+      await axios.post(`${API_BASE_URL}/api/admin/kitchen-updates`, {
         name: ingredientName,
         description,
       });
