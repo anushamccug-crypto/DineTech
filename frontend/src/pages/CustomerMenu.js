@@ -2,32 +2,26 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../services/authService"; 
-import GamesHub from "./GamesHub"; 
+import GamesHub from "./GamesHub";
+
+const API_BASE_URL = window.location.hostname === "localhost" 
+  ? "http://localhost:5000" 
+  : "https://dine-tech-iyqs.vercel.app";
 
 function CustomerMenu() {
-  // ================= API CONFIG =================
-  const API_BASE_URL = window.location.hostname === "localhost" 
-    ? "http://localhost:5000" 
-    : "https://dine-tech-iyqs.vercel.app";
-
-  // ================= STATES =================
+  // ================= ORIGINAL MENU STATES =================
   const [dishes, setDishes] = useState([]);
   const [inventory, setInventory] = useState([]);
-  const [filter, setFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("Chef’s Signature Specials");
+  const [selectedAllergy, setSelectedAllergy] = useState("");
+  const [proteinPriority, setProteinPriority] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [priceSort, setPriceSort] = useState("");
   const [flippedCard, setFlippedCard] = useState(null);
-  const [proteinPriority, setProteinPriority] = useState(false);
+  const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem("cart")) || []);
 
-  // --- LOGIN & MODAL STATES ---
-  const [showLogin, setShowLogin] = useState(false);
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [loginMessage, setLoginMessage] = useState("");
-
-  // --- LIVE ORDER & TRACKING ---
-  const [orderId, setOrderId] = useState(null);
+  // ================= LIVE ORDER & TRACKING STATES =================
+  const [orderId, setOrderId] = useState(localStorage.getItem("latestOrderId"));
   const [orderStatus, setOrderStatus] = useState("PLACED");
   const [orderDetails, setOrderDetails] = useState(null);
   const [remainingTime, setRemainingTime] = useState(0);
@@ -36,25 +30,28 @@ function CustomerMenu() {
   const [ratings, setRatings] = useState({});
   const [hoverRating, setHoverRating] = useState({});
 
-  const [cart, setCart] = useState(() => {
-    const saved = localStorage.getItem("cart");
-    return saved ? JSON.parse(saved) : [];
-  });
+  // ================= LOGIN STATES =================
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginMessage, setLoginMessage] = useState("");
 
   const navigate = useNavigate();
 
-  // ================= FETCHING LOGIC =================
+  // ================= FETCH DATA & LIVE SYNC =================
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const dishRes = await axios.get(`${API_BASE_URL}/api/dishes`);
-        const invRes = await axios.get(`${API_BASE_URL}/api/inventory`);
+        const [dishRes, invRes] = await Promise.all([
+          axios.get(`${API_BASE_URL}/api/dishes`),
+          axios.get(`${API_BASE_URL}/api/inventory`)
+        ]);
         setDishes(dishRes.data);
         setInventory(invRes.data);
-      } catch (err) { console.error("Fetch Error:", err); }
+      } catch (err) { console.error("Fetch error:", err); }
     };
     fetchData();
-  }, [API_BASE_URL]);
+  }, []);
 
   const fetchOrder = async (id) => {
     try {
@@ -62,9 +59,9 @@ function CustomerMenu() {
       const order = res.data;
       setOrderDetails(order);
       setOrderStatus(order.status);
-      
-      const rated = localStorage.getItem(`orderRated_${id}`);
-      if (order.status === "SERVED" && !rated) setShowRatingPopup(true);
+      if (order.status === "SERVED" && !localStorage.getItem(`orderRated_${id}`)) {
+        setShowRatingPopup(true);
+      }
       if (remainingTime === 0 && order.status !== "SERVED") {
         setRemainingTime((order.estimatedPrepTime || 15) * 60);
       }
@@ -72,48 +69,32 @@ function CustomerMenu() {
   };
 
   useEffect(() => {
-    const id = localStorage.getItem("latestOrderId");
-    if (id) {
-      setOrderId(id);
-      fetchOrder(id);
-      const interval = setInterval(() => fetchOrder(id), 5000);
+    if (orderId) {
+      fetchOrder(orderId);
+      const interval = setInterval(() => fetchOrder(orderId), 5000);
       return () => clearInterval(interval);
     }
-  }, []);
+  }, [orderId]);
 
   useEffect(() => {
-    if (remainingTime <= 0) return;
-    const timer = setInterval(() => setRemainingTime(p => p - 1), 1000);
-    return () => clearInterval(timer);
+    if (remainingTime > 0) {
+      const timer = setInterval(() => setRemainingTime(prev => prev - 1), 1000);
+      return () => clearInterval(timer);
+    }
   }, [remainingTime]);
 
-  // ================= HANDLERS =================
-  const addToCart = (dish) => {
-    const exists = cart.find(i => i.dish._id === dish._id);
-    if (exists) setCart(cart.map(i => i.dish._id === dish._id ? { ...i, quantity: i.quantity + 1 } : i));
-    else setCart([...cart, { dish, quantity: 1 }]);
-  };
+  useEffect(() => {
+    localStorage.setItem("cart", JSON.stringify(cart));
+  }, [cart]);
 
-  const handleLoginSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const data = await loginUser({ email: loginEmail, password: loginPassword });
-      if (data.role === "admin") navigate("/admin");
-      else if (data.role === "kitchen") navigate("/kitchen-home");
-    } catch { setLoginMessage("Invalid credentials"); }
-  };
-
-  // ✅ FIX FOR VERCEL BUILD ERROR
+  // ================= LOGIC & HANDLERS =================
   const submitRatings = () => {
-    if (Object.keys(ratings).length === 0) return alert("Please rate a dish ⭐");
     localStorage.setItem(`orderRated_${orderId}`, "true");
     setShowRatingPopup(false);
-    alert("Feedback Submitted!");
+    alert("Feedback Submitted! Thank you.");
   };
 
-  const formatTime = (sec) => `${Math.floor(sec / 60)}m ${sec % 60}s`;
-
-  // ================= FILTERING =================
+  const allergyMap = { DAIRY: ["Milk", "Butter", "Cheese", "Paneer"], NUTS: ["Peanut", "Almond", "Cashew"], GLUTEN: ["Wheat Flour", "Maida"], FISH: ["Seer Fish", "Fish"] };
   const isDishAvailable = (dish) => {
     if (!dish.ingredients?.length) return true;
     return dish.ingredients.every(ing => {
@@ -122,66 +103,102 @@ function CustomerMenu() {
     });
   };
 
-  let filtered = dishes.filter(isDishAvailable);
-  if (searchTerm) filtered = filtered.filter(d => d.name.toLowerCase().includes(searchTerm.toLowerCase()));
-  else filtered = filtered.filter(d => d.category === categoryFilter);
+  const isRestrictedDish = (dish) => {
+    if (!selectedAllergy) return false;
+    const mapped = allergyMap[selectedAllergy].map(a => a.toLowerCase().trim());
+    return (dish.ingredients || []).some(i => mapped.includes(i.toLowerCase().trim()));
+  };
 
-  const statusSteps = ["PLACED", "PREPARING", "READY", "SERVED"];
-  const progressWidth = ((statusSteps.indexOf(orderStatus) + 1) / statusSteps.length) * 100;
+  const addToCart = (dish) => {
+    if (isRestrictedDish(dish)) return alert("Contains your selected allergen!");
+    const exists = cart.find(i => i.dish._id === dish._id);
+    if (exists) setCart(cart.map(i => i.dish._id === dish._id ? { ...i, quantity: i.quantity + 1 } : i));
+    else setCart([...cart, { dish, quantity: 1 }]);
+  };
+
+  // ================= FILTERING =================
+  let filteredDishes = dishes.filter(isDishAvailable);
+  if (searchTerm) filteredDishes = filteredDishes.filter(d => d.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  else if (proteinPriority) filteredDishes.sort((a, b) => (b.nutrition?.protein || 0) - (a.nutrition?.protein || 0));
+  else filteredDishes = filteredDishes.filter(d => d.category === categoryFilter);
+
+  const formatTime = (sec) => `${Math.floor(sec / 60)}m ${sec % 60}s`;
+  const statusColors = { PLACED: "#ff6ec7", PREPARING: "#d16ba5", READY: "#b185db", SERVED: "#845ec2" };
+  const progressWidth = ((["PLACED", "PREPARING", "READY", "SERVED"].indexOf(orderStatus) + 1) / 4) * 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-100 via-purple-100 to-blue-100 p-8">
       
-      {/* TRACKER BAR */}
+      {/* 🟢 NEW: DYNAMIC ORDER TRACKER (Only shows if there is an active order) */}
       {orderId && orderStatus !== "SERVED" && (
-        <div className="max-w-4xl mx-auto mb-8 bg-white/90 p-6 rounded-3xl shadow-xl border border-purple-200">
-           <div className="flex justify-between items-center mb-2">
-              <h3 className="font-bold text-purple-900">Order for {orderDetails?.customerName || "Customer"}</h3>
-              <span className="bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-bold">{orderStatus}</span>
+        <div className="max-w-4xl mx-auto mb-10 bg-white/80 backdrop-blur-md p-6 rounded-3xl shadow-xl border border-purple-200">
+           <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="text-xl font-bold text-purple-900">Live Order: #{orderId.slice(-6)}</h3>
+                <p className="text-sm text-purple-700">Customer: <b>{orderDetails?.customerName || "Loading..."}</b></p>
+              </div>
+              <span className="px-4 py-1 rounded-full text-white font-bold" style={{ background: statusColors[orderStatus] }}>{orderStatus}</span>
            </div>
-           <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
-              <div style={{ width: `${progressWidth}%` }} className="h-full bg-purple-600 transition-all duration-1000" />
+           <div className="w-full bg-gray-200 h-3 rounded-full overflow-hidden">
+              <div style={{ width: `${progressWidth}%`, background: statusColors[orderStatus] }} className="h-full transition-all duration-1000" />
            </div>
-           <div className="flex justify-between mt-3">
-              <p className="text-sm">⏱ Remaining: <b>{formatTime(remainingTime)}</b></p>
-              <button onClick={() => setShowGameModal(true)} className="text-xs bg-indigo-500 text-white px-3 py-1 rounded-lg">🎮 Play Games</button>
+           <div className="flex justify-between mt-4">
+              <p className="text-sm font-medium">⏱ Prep Time: {formatTime(remainingTime)} left</p>
+              <button onClick={() => setShowGameModal(true)} className="bg-purple-600 text-white px-4 py-1 rounded-xl text-xs font-bold shadow-md hover:bg-purple-700">🎮 Play Games</button>
            </div>
         </div>
       )}
 
-      {/* HEADER & FILTERS */}
-      <div className="sticky top-4 z-50 bg-white/50 backdrop-blur-md rounded-2xl p-6 shadow-lg mb-8">
-        <div className="grid md:grid-cols-5 gap-4">
-          <input type="text" placeholder="Search..." className="p-3 rounded-xl border-none outline-none" onChange={e => setSearchTerm(e.target.value)} />
-          <button onClick={() => navigate("/cart")} className="bg-purple-600 text-white p-3 rounded-xl font-bold">🛒 Cart ({cart.length})</button>
-          <button onClick={() => setShowLogin(true)} className="border-2 border-purple-600 text-purple-600 p-3 rounded-xl font-bold">🔑 Staff</button>
+      {/* 🔵 RESTORED HEADER & FILTERS */}
+      <div className="sticky top-4 z-50 bg-white/40 backdrop-blur-md border border-white/30 shadow-xl rounded-2xl p-6 space-y-6 mb-10">
+        <div className="text-center"><h1 className="text-5xl font-extrabold bg-gradient-to-r from-purple-700 to-pink-600 bg-clip-text text-transparent">🍽 TasteCraft</h1></div>
+        <div className="grid md:grid-cols-6 gap-4 items-center">
+          <input type="text" placeholder="🔍 Search..." className="px-4 py-3 rounded-xl bg-white/70 outline-none" onChange={e => setSearchTerm(e.target.value)} />
+          <select value={selectedAllergy} onChange={e => setSelectedAllergy(e.target.value)} className="px-4 py-3 rounded-xl bg-white/70">
+            <option value="">No Allergy</option><option value="DAIRY">Dairy</option><option value="NUTS">Nuts</option>
+          </select>
+          <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={proteinPriority} onChange={() => setProteinPriority(!proteinPriority)} /> 💪 Protein</label>
+          <button onClick={() => navigate("/cart")} className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold shadow-lg">🛒 Cart ({cart.length})</button>
+          <button onClick={() => setShowLogin(true)} className="px-6 py-3 rounded-xl border-2 border-purple-500 text-purple-700 font-bold">🔑 Staff</button>
         </div>
       </div>
 
-      <div className="flex gap-8">
+      <div className="flex gap-10">
         {/* SIDEBAR */}
-        <div className="w-64 space-y-2">
-          {["Chef’s Signature Specials", "Vegetarian Starters", "Non-Vegetarian Starters", "Desserts", "Beverages"].map(c => (
-            <button key={c} onClick={() => setCategoryFilter(c)} className={`w-full text-left p-3 rounded-xl ${categoryFilter === c ? 'bg-purple-600 text-white' : 'bg-white/40'}`}>{c}</button>
+        <div className="w-72 space-y-3">
+          {["Chef’s Signature Specials", "Vegetarian Starters", "Non-Vegetarian Starters", "Desserts", "Beverages"].map(section => (
+            <button key={section} onClick={() => setCategoryFilter(section)} className={`block w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all ${categoryFilter === section ? "bg-purple-600 text-white shadow-lg" : "bg-white/40 hover:bg-purple-100"}`}>{section}</button>
           ))}
         </div>
 
-        {/* GRID */}
-        <div className="flex-1 grid md:grid-cols-3 gap-6">
-          {filtered.map(dish => (
-            <div key={dish._id} className="bg-white rounded-3xl p-4 shadow-md h-[400px] flex flex-col justify-between">
-              <img src={dish.imageUrl} className="h-40 w-full object-cover rounded-2xl" alt="" />
-              <h3 className="font-bold mt-2">{dish.name}</h3>
-              <p className="text-purple-700 font-bold">₹{dish.price}</p>
-              <button onClick={() => addToCart(dish)} className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold">Add to Cart</button>
+        {/* DISH GRID WITH FLIP CARDS */}
+        <div className="flex-1 grid sm:grid-cols-2 lg:grid-cols-3 gap-10">
+          {filteredDishes.map((dish, index) => (
+            <div key={dish._id} className="perspective h-[450px]" style={{ animationDelay: `${index * 0.05}s` }}>
+              <div onClick={() => setFlippedCard(flippedCard === dish._id ? null : dish._id)} className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d cursor-pointer ${flippedCard === dish._id ? "rotate-y-180" : ""}`}>
+                {/* FRONT */}
+                <div className="absolute w-full h-full backface-hidden bg-white/90 rounded-3xl shadow-xl p-5">
+                  <img src={dish.imageUrl} alt="" className="w-full h-48 object-cover rounded-xl" />
+                  <h3 className="font-bold text-lg mt-4">{dish.name}</h3>
+                  <p className="text-purple-700 font-bold mt-2">₹ {dish.price}</p>
+                </div>
+                {/* BACK */}
+                <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-white/95 rounded-3xl shadow-xl p-6 flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <p className="text-sm italic">✨ {dish.description || "Chef's special preparation."}</p>
+                    <div className="text-xs">Protein: {dish.nutrition?.protein}g | Calories: {dish.nutrition?.calories}</div>
+                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); addToCart(dish); }} className="w-full py-3 bg-purple-600 text-white rounded-xl font-bold">Add to Cart</button>
+                </div>
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* MODALS */}
+      {/* MODALS (Game, Login, Rating) */}
       {showGameModal && (
-        <div className="fixed inset-0 z-[200] bg-black/90 p-4 flex items-center justify-center">
+        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-5xl h-[85vh] rounded-3xl relative">
             <button onClick={() => setShowGameModal(false)} className="absolute -top-10 right-0 text-white text-2xl">Close ✕</button>
             <GamesHub />
@@ -190,31 +207,20 @@ function CustomerMenu() {
       )}
 
       {showRatingPopup && (
-        <div className="fixed inset-0 z-[300] bg-black/70 flex items-center justify-center">
-          <div className="bg-white p-8 rounded-3xl text-center w-80">
-            <h3 className="font-bold mb-4">Rate Your Experience!</h3>
-            <div className="flex justify-center gap-2 mb-6">
-              {[1, 2, 3, 4, 5].map(s => (
-                <span key={s} onClick={() => setRatings({all: s})} className={`text-3xl cursor-pointer ${ratings.all >= s ? 'text-yellow-400' : 'text-gray-300'}`}>★</span>
-              ))}
-            </div>
-            <button onClick={submitRatings} className="w-full bg-purple-600 text-white py-3 rounded-xl">Submit</button>
+        <div className="fixed inset-0 z-[200] bg-black/60 flex items-center justify-center">
+          <div className="bg-white p-8 rounded-3xl text-center w-80 shadow-2xl">
+            <h3 className="font-bold mb-4">Rate Your Meal! ⭐</h3>
+            <button onClick={submitRatings} className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold mt-4">Submit</button>
           </div>
         </div>
       )}
 
-      {showLogin && (
-        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center">
-          <div className="bg-white p-10 rounded-3xl w-96 relative">
-            <button onClick={() => setShowLogin(false)} className="absolute top-4 right-4">✖</button>
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
-               <input type="email" placeholder="Email" className="w-full p-4 bg-gray-100 rounded-xl" onChange={e => setLoginEmail(e.target.value)} />
-               <input type="password" placeholder="Password" className="w-full p-4 bg-gray-100 rounded-xl" onChange={e => setLoginPassword(e.target.value)} />
-               <button className="w-full bg-purple-600 text-white py-4 rounded-xl font-bold">Login</button>
-            </form>
-          </div>
-        </div>
-      )}
+      <style>{`
+        .perspective { perspective: 1200px; }
+        .transform-style-preserve-3d { transform-style: preserve-3d; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        .backface-hidden { backface-visibility: hidden; }
+      `}</style>
     </div>
   );
 }
