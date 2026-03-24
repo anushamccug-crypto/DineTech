@@ -28,8 +28,8 @@ const [hoverRating, setHoverRating] = useState({});
 
   const fetchOrder = async (id) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/orders/${id}`);
-
+      // ✅ Using the dynamic URL constant you defined at line 14
+const res = await axios.get(`${API_BASE_URL}/api/orders/${id}`);
       const order = res.data;
 
       setOrderDetails(order);
@@ -134,68 +134,59 @@ const [hoverRating, setHoverRating] = useState({});
       }}
     >
       {/* ORDER CARD */}
+<div
+  style={{
+    background: "#ffffff",
+    padding: "30px",
+    borderRadius: "20px",
+    maxWidth: "750px",
+    margin: "0 auto 30px auto",
+    boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
+  }}
+>
+  <h3 style={{ marginBottom: "15px" }}>Order ID: {orderId}</h3>
 
-      <div
-        style={{
-          background: "#ffffff",
-          padding: "30px",
-          borderRadius: "20px",
-          maxWidth: "750px",
-          margin: "0 auto 30px auto",
-          boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
-        }}
-      >
-        <h3 style={{ marginBottom: "15px" }}>Order ID: {orderId}</h3>
+  {orderDetails && (
+    <div style={{ textAlign: "left", marginBottom: "10px" }}>
+      <p style={{ margin: "5px 0" }}>
+        <strong>Customer:</strong> {orderDetails.customerName}
+      </p>
+      <p style={{ margin: "5px 0" }}>
+        <strong>Total:</strong> ₹ {orderDetails.totalAmount}
+      </p>
+    </div>
+  )}
 
-        {orderDetails && (
-          <>
-            <p>
-              <strong>Customer:</strong> {orderDetails.customerName}
-            </p>
+  {orderStatus !== "READY" && orderStatus !== "SERVED" && (
+    <p style={{ marginTop: "15px" }}>
+      ⏱ Estimated: {estimatedPrepTime || 15} mins | <strong>Remaining:</strong> {formatTime(remainingTime)}
+    </p>
+  )}
 
-            <p>
-              <strong>Total:</strong> ₹ {orderDetails.totalAmount}
-            </p>
+  {/* Progress Bar */}
+  <div
+    style={{
+      marginTop: "20px",
+      background: "#eee",
+      height: "12px",
+      borderRadius: "20px",
+      overflow: "hidden",
+    }}
+  >
+    <div
+      style={{
+        width: `${progressWidth}%`,
+        background: statusColors[orderStatus],
+        height: "100%",
+        transition: "width 0.5s ease",
+      }}
+    />
+  </div>
 
-            <p>
-              <strong>Payment Method:</strong>{" "}
-              {orderDetails.payment?.method || "Not Available"}
-            </p>
-          </>
-        )}
-
-        {orderStatus !== "READY" && orderStatus !== "SERVED" && (
-          <p style={{ marginTop: "15px" }}>
-            ⏱ Estimated: {estimatedPrepTime} mins <br />
-            <strong>Remaining:</strong> {formatTime(remainingTime)}
-          </p>
-        )}
-
-        {/* Progress Bar */}
-
-        <div
-          style={{
-            marginTop: "20px",
-            background: "#eee",
-            height: "12px",
-            borderRadius: "20px",
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              width: `${progressWidth}%`,
-              background: statusColors[orderStatus],
-              height: "100%",
-              transition: "width 0.5s ease",
-            }}
-          />
-        </div>
-
-        <h4 style={{ marginTop: "15px", color: statusColors[orderStatus] }}>
-          Status: {orderStatus}
-        </h4>
-      </div>
+  <h4 style={{ marginTop: "15px", color: statusColors[orderStatus] }}>
+    Status: {orderStatus}
+  </h4>
+</div>
 
       {/* GAME BUTTON */}
 
