@@ -134,10 +134,28 @@ function SlidingPuzzle({ onWin, goBack }) {
 
 function FoodQuiz({ onWin, goBack }) {
   const questions = [
-    { q: "Capital of Italian pizza?", options: ["Rome","Naples","Milan","Venice"], answer: "Naples" },
-    { q: "Main ingredient in sushi?", options: ["Rice","Bread","Cheese","Chicken"], answer: "Rice" },
-    { q: "Famous Indian rice dish?", options: ["Fried Rice","Biryani","Risotto","Paella"], answer: "Biryani" }
-  ];
+  { q: "Capital of Italian pizza?", options: ["Rome", "Naples", "Milan", "Venice"], answer: "Naples" },
+  { q: "Main ingredient in sushi?", options: ["Rice", "Bread", "Cheese", "Chicken"], answer: "Rice" },
+  { q: "Famous Indian rice dish?", options: ["Fried Rice", "Biryani", "Risotto", "Paella"], answer: "Biryani" },
+  { q: "Main ingredient in traditional Guacamole?", options: ["Tomato", "Avocado", "Onion", "Mango"], answer: "Avocado" },
+  { q: "Which country is famous for Tacos and Burritos?", options: ["Spain", "Brazil", "Mexico", "USA"], answer: "Mexico" },
+  { q: "What is the primary ingredient in Hummus?", options: ["Lentils", "Chickpeas", "Soybeans", "Peas"], answer: "Chickpeas" },
+  { q: "Which French pastry is shaped like a crescent?", options: ["Macaron", "Eclair", "Croissant", "Baguette"], answer: "Croissant" },
+  { q: "What is the main protein in a classic 'Paneer Tikka'?", options: ["Chicken", "Tofu", "Cottage Cheese", "Fish"], answer: "Cottage Cheese" },
+  { q: "Which drink is known as 'The Queen of Beverages'?", options: ["Coffee", "Tea", "Wine", "Juice"], answer: "Tea" },
+  { q: "What is the main ingredient of a 'Margarita' pizza?", options: ["Salami", "Basil", "Pineapple", "Chicken"], answer: "Basil" },
+  { q: "Which Italian dessert translates to 'Pick me up'?", options: ["Gelato", "Panna Cotta", "Tiramisu", "Cannoli"], answer: "Tiramisu" },
+  { q: "What gives 'Red Velvet' cake its traditional color?", options: ["Strawberries", "Beetroot/Cocoa", "Red Grapes", "Cherry Juice"], answer: "Beetroot/Cocoa" },
+  { q: "Which sauce is used in a classic Eggs Benedict?", options: ["Mayo", "Hollandaise", "Ketchup", "Pesto"], answer: "Hollandaise" },
+  { q: "What is the main ingredient in 'Kimchi'?", options: ["Cabbage", "Carrot", "Spinach", "Potato"], answer: "Cabbage" },
+  { q: "Which nut is used to make Marzipan?", options: ["Walnut", "Peanut", "Almond", "Cashew"], answer: "Almond" },
+  { q: "What is the traditional Japanese soup made from fermented soybeans?", options: ["Ramen", "Miso", "Udon", "Pho"], answer: "Miso" },
+  { q: "Which cheese is traditionally used on a Greek Salad?", options: ["Cheddar", "Mozzarella", "Feta", "Parmesan"], answer: "Feta" },
+  { q: "What type of pasta is shaped like little ears?", options: ["Penne", "Orecchiette", "Fusilli", "Ravioli"], answer: "Orecchiette" },
+  { q: "Which spice is the most expensive in the world by weight?", options: ["Cinnamon", "Saffron", "Cardamom", "Vanilla"], answer: "Saffron" },
+  { q: "What is the main ingredient in a 'Falafel'?", options: ["Potato", "Chickpeas", "Breadcrumbs", "Rice"], answer: "Chickpeas" }
+];
+
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState(null);
   const [score, setScore] = useState(0);
@@ -222,7 +240,28 @@ function ReactionGame({ onWin, goBack }) {
 }
 
 function WordBuilder({ onWin, goBack }) {
-  const words = ["BURGER","PIZZA","TACO","PASTA","SUSHI","STEAK"];
+  const words = [
+  "BURGER",
+  "PIZZA",
+  "TACO",
+  "PASTA",
+  "SUSHI",
+  "STEAK",
+  "BIRYANI",
+  "NOODLES",
+  "LASAGNA",
+  "DIMSUM",
+  "WAFFLES",
+  "PANCAKE",
+  "KEBABS",
+  "FALAFEL",
+  "RISOTTO",
+  "RAMEN",
+  "NACHOS",
+  "BURRITO",
+  "GNOCCHI",
+  "DESSERT"
+];
   const [word, setWord] = useState(words[Math.floor(Math.random()*words.length)]);
   const [input, setInput] = useState("");
   const [round, setRound] = useState(1);
