@@ -3,8 +3,9 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import Layout from "./layout/Layout";
 
-import Login from "./pages/Login";
-import AdminDashboard from "./pages/AdminDashboard"; // ✅ Updated path
+// Components & Pages
+import Login from "./pages/Login"; // Keeping this just in case, but "/" is now Menu
+import AdminDashboard from "./pages/AdminDashboard";
 import KitchenDashboard from "./pages/KitchenDashboard";
 import CustomerMenu from "./pages/CustomerMenu";
 import OrderSummary from "./pages/OrderSummary";
@@ -22,21 +23,30 @@ function App() {
   return (
     <Router>
       <Routes>
+        
+        {/* ⭐ THE NEW OPENING PAGE ⭐ */}
+        {/* We move CustomerMenu to "/" so it's the first thing users see */}
+        <Route path="/" element={<CustomerMenu />} />
 
-        {/* Login without layout */}
-        <Route path="/" element={<Login />} />
+        {/* Keeping old login path available just in case at /login */}
+        <Route path="/login" element={<Login />} />
 
-        {/* ✅ CUSTOMER DASHBOARD WITHOUT LAYOUT */}
+        {/* CUSTOMER DASHBOARD WITHOUT LAYOUT */}
         <Route path="/customer-dashboard" element={<CustomerDashboard />} />
 
         {/* All ADMIN / KITCHEN routes inside layout */}
         <Route element={<Layout />}>
 
-          {/* ✅ Updated Admin Dashboard to ML-powered component */}
+          {/* Admin & Kitchen Dashboard Routes */}
           <Route path="/admin" element={<AdminDashboard />} />
-
+          <Route path="/kitchen-home" element={<KitchenHome />} />
           <Route path="/kitchen" element={<KitchenDashboard />} />
-          <Route path="/menu" element={<CustomerMenu />} />
+          
+          {/* Menu & Cart Routes */}
+          <Route path="/menu" element={<CustomerMenu />} /> {/* Also kept for direct navigation */}
+          <Route path="/cart" element={<CartPage />} />
+          
+          {/* Order & Billing Routes */}
           <Route path="/orders-summary" element={<OrderSummary />} />
           <Route path="/order-status" element={<OrderStatus />} />
           <Route path="/kitchen-orders" element={<KitchenOrders />} />
@@ -44,8 +54,6 @@ function App() {
           <Route path="/track-order" element={<CustomerOrders />} />
           <Route path="/bill" element={<BillPage />} />
           <Route path="/receipt/:billId" element={<Receipt />} />
-          <Route path="/kitchen-home" element={<KitchenHome />} />
-          <Route path="/cart" element={<CartPage />} />
 
         </Route>
 
@@ -55,5 +63,3 @@ function App() {
 }
 
 export default App;
-
-
