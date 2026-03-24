@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../services/authService";
-import GamesHub from "./GamesHub"; // Ensure this path is correct
+import GamesHub from "./GamesHub"; 
 
 function CustomerMenu() {
   // ================= API CONFIG =================
@@ -10,7 +10,7 @@ function CustomerMenu() {
     ? "http://localhost:5000" 
     : "https://dine-tech-iyqs.vercel.app";
 
-  // ================= ORIGINAL STATES =================
+  // ================= STATES =================
   const [dishes, setDishes] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [filter, setFilter] = useState("ALL");
@@ -39,9 +39,12 @@ function CustomerMenu() {
   const [remainingTime, setRemainingTime] = useState(0);
   const [showGameModal, setShowGameModal] = useState(false);
   const [showRatingPopup, setShowRatingPopup] = useState(false);
-  const [ratings, setRatings] = useState({});
+  const [ratings, setRatings] = useState({ v: 0 });
 
-  // ================= FETCH DATA =================
+  // Use a ref to track if we've already initialized the timer for this session
+  const hasInitializedTimer = useRef(false);
+
+  // ================= FETCH INITIAL DATA =================
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -56,62 +59,47 @@ function CustomerMenu() {
     fetchData();
   }, [API_BASE_URL]);
 
-  // ================= LIVE ORDER SYNC =================
-  const fetchOrder = async (id) => {
-    try {
-      const res = await axios.get(`${API_BASE_URL}/api/orders/${id}`);
-      const order = res.data;
-      setOrderDetails(order);
-      setOrderStatus(order.status);
-      
-      // Show rating if served and not already rated
-      if (order.status === "SERVED" && !localStorage.getItem(`orderRated_${id}`)) {
-        setShowRatingPopup(true);
-      }
-      
-      // Set initial timer if not set
-      if (remainingTime === 0 && order.status !== "SERVED") {
-        setRemainingTime((order.estimatedPrepTime || 15) * 60);
-      }
-    } catch (err) { console.error("Sync error:", err); }
-  };
-
-  // --- UPDATE THIS BLOCK ---
+  // ================= FIXED LIVE ORDER SYNC =================
   useEffect(() => {
-    if (orderId) {
-      const fetchOrder = async () => {
-        try {
-          const res = await axios.get(`${API_BASE_URL}/api/orders/${orderId}`);
-          const order = res.data;
-          
-          setOrderDetails(order);
-          setOrderStatus(order.status);
-          
-          // FIX: If timer is 0 but order is active, force it to 15 mins (900 seconds)
-          if (remainingTime <= 0 && order.status !== "SERVED") {
-            const waitTime = order.estimatedPrepTime || 15; 
-            setRemainingTime(waitTime * 60);
-          }
+    if (!orderId) return;
 
-          if (order.status === "SERVED" && !localStorage.getItem(`orderRated_${orderId}`)) {
-            setShowRatingPopup(true);
-          }
-        } catch (err) { 
-          console.error("Sync error:", err); 
+    const fetchOrderData = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/orders/${orderId}`);
+        const order = res.data;
+        
+        setOrderDetails(order);
+        setOrderStatus(order.status);
+        
+        // FIX: Only initialize timer if order isn't served and we haven't set it yet
+        if (order.status !== "SERVED" && !hasInitializedTimer.current) {
+          const waitTime = order.estimatedPrepTime || 15;
+          setRemainingTime(waitTime * 60);
+          hasInitializedTimer.current = true; // Mark as initialized
         }
-      };
 
-      fetchOrder();
-      const interval = setInterval(fetchOrder, 5000); // Sync every 5 seconds
-      return () => clearInterval(interval);
-    }
+        if (order.status === "SERVED" && !localStorage.getItem(`orderRated_${orderId}`)) {
+          setShowRatingPopup(true);
+        }
+      } catch (err) { 
+        console.error("Sync error:", err); 
+      }
+    };
+
+    fetchOrderData();
+    const interval = setInterval(fetchOrderData, 5000); // Sync status every 5 seconds
+    return () => clearInterval(interval);
   }, [orderId, API_BASE_URL]);
 
+  // ================= TIMER COUNTDOWN =================
   useEffect(() => {
+    let timer;
     if (remainingTime > 0) {
-      const timer = setInterval(() => setRemainingTime(prev => prev - 1), 1000);
-      return () => clearInterval(timer);
+      timer = setInterval(() => {
+        setRemainingTime(prev => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
     }
+    return () => clearInterval(timer);
   }, [remainingTime]);
 
   useEffect(() => {
@@ -162,33 +150,41 @@ function CustomerMenu() {
   if (filter === "VEG") filteredDishes = filteredDishes.filter(d => d.isVeg);
   if (filter === "NONVEG") filteredDishes = filteredDishes.filter(d => !d.isVeg);
   if (searchTerm) filteredDishes = filteredDishes.filter(d => d.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  
   if (proteinPriority) {
     filteredDishes.sort((a, b) => (b.nutrition?.protein || 0) - (a.nutrition?.protein || 0));
     filteredDishes = filteredDishes.slice(0, 25);
   } else if (categoryFilter && !searchTerm) {
     filteredDishes = filteredDishes.filter(d => d.category === categoryFilter);
   }
+  
   if (priceSort === "LOW") filteredDishes.sort((a, b) => a.price - b.price);
   if (priceSort === "HIGH") filteredDishes.sort((a, b) => b.price - a.price);
 
   const isRestrictedDish = (dish) => {
     if (!selectedAllergy) return false;
-    const mapped = allergyMap[selectedAllergy].map(a => a.toLowerCase().trim());
+    const mapped = (allergyMap[selectedAllergy] || []).map(a => a.toLowerCase().trim());
     return (dish.ingredients || []).some(i => mapped.includes(i.toLowerCase().trim()));
   };
 
   const findAlternative = (restrictedDish) => {
     const mapped = allergyMap[selectedAllergy] || [];
-    return dishes.find(d => d._id !== restrictedDish._id && d.category === restrictedDish.category && d.isVeg === restrictedDish.isVeg && !d.ingredients?.some(i => mapped.some(m => m.toLowerCase().trim() === i.toLowerCase().trim())) && isDishAvailable(d));
+    return dishes.find(d => 
+      d._id !== restrictedDish._id && 
+      d.category === restrictedDish.category && 
+      d.isVeg === restrictedDish.isVeg && 
+      !d.ingredients?.some(i => mapped.some(m => m.toLowerCase().trim() === i.toLowerCase().trim())) && 
+      isDishAvailable(d)
+    );
   };
 
- // --- UPDATE THIS FUNCTION ---
   const formatTime = (sec) => {
     if (sec <= 0 && orderStatus !== "SERVED") return "Calculating...";
     const mins = Math.floor(sec / 60);
     const remainingSecs = sec % 60;
-    return `${mins}m ${remainingSecs}s`;
+    return `${mins}m ${remainingSecs < 10 ? '0' : ''}${remainingSecs}s`;
   };
+
   const statusColors = { PLACED: "#ff6ec7", PREPARING: "#d16ba5", READY: "#b185db", SERVED: "#845ec2" };
   const progressWidth = ((["PLACED", "PREPARING", "READY", "SERVED"].indexOf(orderStatus) + 1) / 4) * 100;
 
@@ -197,7 +193,7 @@ function CustomerMenu() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-100 via-purple-100 to-blue-100 p-8 animate-fadeInPage">
       
-      {/* 🚀 LIVE TRACKER SECTION (RESTORED) */}
+      {/* 🚀 LIVE TRACKER SECTION */}
       {orderId && orderStatus !== "SERVED" && (
         <div className="max-w-4xl mx-auto mb-8 bg-white/60 backdrop-blur-md border border-white/50 p-6 rounded-3xl shadow-2xl animate-fadeIn">
           <div className="flex justify-between items-center mb-4">
@@ -211,7 +207,7 @@ function CustomerMenu() {
             <div className="h-full transition-all duration-1000" style={{ width: `${progressWidth}%`, background: statusColors[orderStatus] }} />
           </div>
           <div className="flex justify-between mt-4 items-center">
-            <p className="text-sm font-bold text-gray-700">⏱ {formatTime(remainingTime)} remaining</p>
+            <p className="text-sm font-bold text-gray-700">⏱ Remaining: {formatTime(remainingTime)}</p>
             <button onClick={() => setShowGameModal(true)} className="bg-gradient-to-r from-purple-600 to-pink-500 text-white px-5 py-2 rounded-xl text-xs font-bold hover:scale-105 transition shadow-md">🎮 Play Games</button>
           </div>
         </div>
@@ -221,18 +217,17 @@ function CustomerMenu() {
       <div className="sticky top-4 z-50 bg-white/40 backdrop-blur-md border border-white/30 shadow-xl rounded-2xl p-6 space-y-6">
         <div className="text-center">
           <h1 className="text-5xl font-extrabold bg-gradient-to-r from-purple-700 to-pink-600 bg-clip-text text-transparent">🍽 TasteCraft</h1>
-          <p className="text-gray-600 mt-2 text-sm tracking-wide">Crafted with Passion • Served with Love</p>
         </div>
 
         <div className="grid md:grid-cols-6 gap-4 items-center">
-          <input type="text" placeholder="🔍 Search dish..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="px-4 py-3 rounded-xl bg-white/70 outline-none" />
+          <input type="text" placeholder="🔍 Search dish..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="px-4 py-3 rounded-xl bg-white/70 outline-none shadow-inner" />
           <select value={selectedAllergy} onChange={e => setSelectedAllergy(e.target.value)} className="px-4 py-3 rounded-xl bg-white/70 outline-none">
             <option value="">No Allergy</option><option value="DAIRY">Dairy</option><option value="NUTS">Nuts</option><option value="GLUTEN">Gluten</option><option value="FISH">Fish</option>
           </select>
           <select value={priceSort} onChange={e => setPriceSort(e.target.value)} className="px-4 py-3 rounded-xl bg-white/70 outline-none">
             <option value="">Sort Price</option><option value="LOW">Low → High</option><option value="HIGH">High → Low</option>
           </select>
-          <label className="flex items-center gap-3 text-sm font-medium">
+          <label className="flex items-center gap-3 text-sm font-medium cursor-pointer">
             <input type="checkbox" checked={proteinPriority} onChange={() => setProteinPriority(!proteinPriority)} className="w-5 h-5 accent-purple-600" /> 💪 Protein
           </label>
           <button onClick={() => navigate("/cart")} className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold shadow-lg transition hover:scale-105">🛒 Cart ({cart.reduce((s, i) => s + i.quantity, 0)})</button>
@@ -258,26 +253,26 @@ function CustomerMenu() {
             return (
               <div key={dish._id} className="perspective animate-fadeIn" style={{ animationDelay: `${index * 0.05}s` }}>
                 <div onClick={() => setFlippedCard(flippedCard === dish._id ? null : dish._id)} className={`relative w-full h-[520px] transition-transform duration-700 transform-style-preserve-3d cursor-pointer ${flippedCard === dish._id ? "rotate-y-180" : ""}`}>
-                  {/* FRONT */}
                   <div className="absolute w-full h-full backface-hidden bg-white/90 rounded-3xl shadow-xl p-5 overflow-hidden">
-                    <img src={dish.imageUrl} alt={dish.name} className="w-full h-52 object-cover rounded-xl" />
+                    <img src={dish.imageUrl} alt={dish.name} className="w-full h-52 object-cover rounded-xl shadow-md" />
                     <h3 className="font-bold text-lg mt-4 text-gray-800">{dish.name}</h3>
                     <p className="text-purple-700 font-bold mt-2 text-lg">₹ {dish.price}</p>
+                    <div className="mt-4 flex items-center gap-2">
+                       <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded ${dish.isVeg ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{dish.isVeg ? "Veg" : "Non-Veg"}</span>
+                    </div>
                   </div>
-                  {/* BACK */}
                   <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-white/95 rounded-3xl shadow-xl p-6 flex flex-col justify-between">
                     <div className="space-y-4">
-                      <span className={`px-2 py-1 text-xs rounded-full ${dish.isVeg ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{dish.isVeg ? "🟢 Veg" : "🔴 Non-Veg"}</span>
-                      <p className="text-sm text-gray-600 italic">✨ {dish.description || "Chef's special."}</p>
+                      <p className="text-sm text-gray-600 italic leading-relaxed">✨ {dish.description || "Chef's special prepared with fresh ingredients."}</p>
                       {restricted && (
                         <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
-                          <p className="text-red-600 text-xs font-bold">⚠ Contains Allergen</p>
-                          {alternative && <button onClick={(e) => { e.stopPropagation(); addToCart(alternative); }} className="mt-1 text-xs text-green-600 underline">Add {alternative.name} instead?</button>}
+                          <p className="text-red-600 text-xs font-bold">⚠ Contains {selectedAllergy}</p>
+                          {alternative && <button onClick={(e) => { e.stopPropagation(); addToCart(alternative); }} className="mt-1 text-xs text-green-600 underline font-medium">Try {alternative.name} instead?</button>}
                         </div>
                       )}
-                      <div className="text-xs space-y-1"><p>Protein: {dish.nutrition?.protein || 0}g</p><p>Calories: {dish.nutrition?.calories || 0}</p></div>
+                      <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg"><p>Protein: {dish.nutrition?.protein || 0}g</p><p>Calories: {dish.nutrition?.calories || 0} kcal</p></div>
                     </div>
-                    <button disabled={restricted} onClick={(e) => { e.stopPropagation(); addToCart(dish); }} className={`py-3 rounded-xl font-bold transition ${restricted ? "bg-gray-300 text-white" : "bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-md hover:scale-105"}`}>{restricted ? "Restricted" : "Add to Cart"}</button>
+                    <button disabled={restricted} onClick={(e) => { e.stopPropagation(); addToCart(dish); }} className={`py-4 rounded-xl font-bold transition shadow-md ${restricted ? "bg-gray-300 text-white cursor-not-allowed" : "bg-gradient-to-r from-purple-600 to-pink-500 text-white hover:scale-105"}`}>{restricted ? "Restricted" : "Add to Cart"}</button>
                   </div>
                 </div>
               </div>
@@ -286,15 +281,15 @@ function CustomerMenu() {
         </div>
       </div>
 
-      {/* MODALS: LOGIN, GAME, RATING */}
+      {/* MODALS */}
       {showLogin && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-white p-10 rounded-3xl shadow-2xl w-96 relative border border-purple-100 animate-fadeIn">
             <button onClick={() => setShowLogin(false)} className="absolute top-5 right-5 text-gray-400 hover:text-purple-600 text-2xl">✖</button>
             <h2 className="text-3xl font-extrabold text-center bg-gradient-to-r from-purple-700 to-pink-600 bg-clip-text text-transparent mb-8">Staff Portal</h2>
             <form onSubmit={handleLoginSubmit} className="space-y-5">
-              <input type="email" placeholder="Email Address" className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 outline-none" onChange={(e) => setLoginEmail(e.target.value)} required />
-              <input type="password" placeholder="Password" className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 outline-none" onChange={(e) => setLoginPassword(e.target.value)} required />
+              <input type="email" placeholder="Email" className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 outline-none focus:ring-2 ring-purple-500" onChange={(e) => setLoginEmail(e.target.value)} required />
+              <input type="password" placeholder="Password" className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 outline-none focus:ring-2 ring-purple-500" onChange={(e) => setLoginPassword(e.target.value)} required />
               <button className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-2xl font-bold shadow-xl hover:scale-105 transition">Sign In</button>
               {loginMessage && <p className="text-center text-red-500 font-medium">{loginMessage}</p>}
             </form>
@@ -305,7 +300,7 @@ function CustomerMenu() {
       {showGameModal && (
         <div className="fixed inset-0 z-[150] bg-black/80 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-5xl h-[85vh] rounded-3xl relative overflow-hidden shadow-2xl">
-            <button onClick={() => setShowGameModal(false)} className="absolute top-4 right-4 bg-red-500 text-white w-10 h-10 rounded-full z-[160] shadow-lg">✕</button>
+            <button onClick={() => setShowGameModal(false)} className="absolute top-4 right-4 bg-red-500 text-white w-10 h-10 rounded-full z-[160] shadow-lg flex items-center justify-center font-bold">✕</button>
             <GamesHub />
           </div>
         </div>
@@ -315,11 +310,11 @@ function CustomerMenu() {
         <div className="fixed inset-0 z-[200] bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white p-8 rounded-3xl text-center w-full max-w-sm shadow-2xl animate-fadeIn">
             <h3 className="text-2xl font-bold text-purple-900 mb-2">How was it? ⭐</h3>
-            <p className="text-gray-600 mb-6">We'd love your feedback on your meal.</p>
+            <p className="text-gray-600 mb-6">Your feedback helps us grow.</p>
             <div className="flex justify-center gap-2 mb-8">
               {[1, 2, 3, 4, 5].map(s => <span key={s} onClick={() => setRatings({v:s})} className={`text-4xl cursor-pointer transition ${ratings.v >= s ? "text-yellow-400" : "text-gray-300"}`}>★</span>)}
             </div>
-            <button onClick={submitRatings} className="w-full bg-purple-600 text-white py-4 rounded-2xl font-bold shadow-lg">Submit Feedback</button>
+            <button onClick={submitRatings} className="w-full bg-purple-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-purple-700 transition">Submit Feedback</button>
           </div>
         </div>
       )}
