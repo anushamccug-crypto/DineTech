@@ -13,7 +13,7 @@ function Login() {
     try {
       const data = await loginUser({ email, password });
 
-      setMessage(`Welcome ${data.name} (${data.role})`);
+     setMessage(`Welcome ${data.name} (${data.role})`);
 
       if (data.role === "admin") {
         navigate("/admin");
