@@ -3,7 +3,7 @@ import DashboardAnalytics from "./DashboardAnalytics";
 import InventorySection from "./InventorySection";
 import KitchenSection from "./KitchenSection";
 
-// ✅ Base URL logic to be passed down or used if needed
+// ✅ Base URL logic to ensure data loads on Vercel AND localhost
 const API_BASE_URL = window.location.hostname === "localhost" 
   ? "http://localhost:5000" 
   : "https://dine-tech-iyqs.vercel.app";
@@ -53,8 +53,8 @@ Kitchen
 
 <div className="p-6">
 
-{/* IMPORTANT: Ensure DashboardAnalytics, InventorySection, and KitchenSection 
-   are updated with the API_BASE_URL constant internally!
+{/* IMPORTANT: DashboardAnalytics, InventorySection, and KitchenSection 
+  now use the API_BASE_URL internally to fetch live data.
 */}
 {activeTab === "dashboard" && <DashboardAnalytics/>}
 

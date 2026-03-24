@@ -38,7 +38,7 @@ function DashboardAnalytics() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // ✅ Replaced localhost with dynamic base URL
+        // ✅ Updated with dynamic URL
         const ordersRes = await axios.get(`${API_BASE_URL}/api/orders`);
         const dishesRes = await axios.get(`${API_BASE_URL}/api/dishes`);
         setOrders(ordersRes.data);
@@ -113,7 +113,9 @@ function DashboardAnalytics() {
     const trendMap = {};
     completedOrders.forEach((o) => {
       const date = new Date(o.createdAt).toISOString().split("T")[0];
-      trendMap[date] = (trendMap[date] || 0) + o.totalAmount;
+      // ✅ Force conversion to Number to ensure Chart.js can read it
+      const amount = Number(o.totalAmount) || 0; 
+      trendMap[date] = (trendMap[date] || 0) + amount;
     });
 
     const salesTrend = Object.entries(trendMap)
@@ -220,13 +222,11 @@ function DashboardAnalytics() {
     ],
   };
 
-  // Floating + hover animation
   const floatingCard =
     "transform transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl";
 
   return (
     <div className="space-y-6">
-      {/* TODAY PERFORMANCE */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-500 text-white p-8 rounded-2xl shadow-lg">
         <h2 className="text-2xl font-semibold mb-6">Today's Performance</h2>
         <div className="grid md:grid-cols-4 gap-6 text-center">
@@ -236,21 +236,18 @@ function DashboardAnalytics() {
               ₹{analytics.todayRevenue || 0}
             </h3>
           </div>
-
           <div className={`${floatingCard} bg-white/20 p-4 rounded-xl`}>
             <p className="text-sm opacity-90">Orders Today</p>
             <h3 className="text-3xl font-bold mt-2">
               {analytics.todayOrders || 0}
             </h3>
           </div>
-
           <div className={`${floatingCard} bg-white/20 p-4 rounded-xl`}>
             <p className="text-sm opacity-90">Top Dish</p>
             <h3 className="text-xl font-semibold mt-2">
               {analytics.todayTopDish}
             </h3>
           </div>
-
           <div className={`${floatingCard} bg-white/20 p-4 rounded-xl`}>
             <p className="text-sm opacity-90">Peak Hour</p>
             <h3 className="text-xl font-semibold mt-2">{analytics.peakHour}</h3>
@@ -258,7 +255,6 @@ function DashboardAnalytics() {
         </div>
       </div>
 
-      {/* TOTAL STATS */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className={`${floatingCard} bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-2xl shadow-md`}>
           <h3 className="text-purple-700 font-semibold text-lg">Total Income</h3>
@@ -266,7 +262,6 @@ function DashboardAnalytics() {
             ₹{analytics.totalIncome || 0}
           </p>
         </div>
-
         <div className={`${floatingCard} bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-2xl shadow-md`}>
           <h3 className="text-purple-700 font-semibold text-lg">Total Orders</h3>
           <p className="text-3xl font-bold mt-3 text-gray-800">
@@ -275,20 +270,18 @@ function DashboardAnalytics() {
         </div>
       </div>
 
-      {/* CHARTS */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className={`${floatingCard} bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-2xl shadow-md`}>
           <h3 className="text-purple-700 font-semibold text-lg mb-4">Top Dishes</h3>
           <Bar data={topDishChart} />
         </div>
-
         <div className={`${floatingCard} bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-2xl shadow-md`}>
           <h3 className="text-purple-700 font-semibold text-lg mb-4">Sales Trend</h3>
-          <li data={salesTrendChart} />
+          {/* ✅ FIXED: Corrected <Line> tag here */}
+          <Line data={salesTrendChart} />
         </div>
       </div>
 
-      {/* CUSTOMER ANALYTICS */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className={`${floatingCard} bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-2xl shadow-md`}>
           <h3 className="text-purple-700 font-semibold text-lg mb-4">Customer Retention</h3>
@@ -298,7 +291,6 @@ function DashboardAnalytics() {
             </div>
           </div>
         </div>
-
         <div className={`${floatingCard} bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-2xl shadow-md`}>
           <h3 className="text-purple-700 font-semibold text-lg mb-4">Frequent Customers</h3>
           <div className="space-y-3">
@@ -312,7 +304,6 @@ function DashboardAnalytics() {
         </div>
       </div>
 
-      {/* AI SECTION */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className={`${floatingCard} bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-2xl shadow-md`}>
           <h3 className="text-purple-700 font-semibold text-lg mb-4">Demand Prediction</h3>
@@ -325,7 +316,6 @@ function DashboardAnalytics() {
             ))}
           </div>
         </div>
-
         <div className={`${floatingCard} bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-2xl shadow-md`}>
           <h3 className="text-purple-700 font-semibold text-lg mb-4">AI Insights</h3>
           <div className="space-y-3">
