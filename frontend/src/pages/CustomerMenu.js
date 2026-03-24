@@ -76,13 +76,36 @@ function CustomerMenu() {
     } catch (err) { console.error("Sync error:", err); }
   };
 
+  // --- UPDATE THIS BLOCK ---
   useEffect(() => {
     if (orderId) {
-      fetchOrder(orderId);
-      const interval = setInterval(() => fetchOrder(orderId), 5000);
+      const fetchOrder = async () => {
+        try {
+          const res = await axios.get(`${API_BASE_URL}/api/orders/${orderId}`);
+          const order = res.data;
+          
+          setOrderDetails(order);
+          setOrderStatus(order.status);
+          
+          // FIX: If timer is 0 but order is active, force it to 15 mins (900 seconds)
+          if (remainingTime <= 0 && order.status !== "SERVED") {
+            const waitTime = order.estimatedPrepTime || 15; 
+            setRemainingTime(waitTime * 60);
+          }
+
+          if (order.status === "SERVED" && !localStorage.getItem(`orderRated_${orderId}`)) {
+            setShowRatingPopup(true);
+          }
+        } catch (err) { 
+          console.error("Sync error:", err); 
+        }
+      };
+
+      fetchOrder();
+      const interval = setInterval(fetchOrder, 5000); // Sync every 5 seconds
       return () => clearInterval(interval);
     }
-  }, [orderId]);
+  }, [orderId, API_BASE_URL]);
 
   useEffect(() => {
     if (remainingTime > 0) {
@@ -159,7 +182,13 @@ function CustomerMenu() {
     return dishes.find(d => d._id !== restrictedDish._id && d.category === restrictedDish.category && d.isVeg === restrictedDish.isVeg && !d.ingredients?.some(i => mapped.some(m => m.toLowerCase().trim() === i.toLowerCase().trim())) && isDishAvailable(d));
   };
 
-  const formatTime = (sec) => `${Math.floor(sec / 60)}m ${sec % 60}s`;
+ // --- UPDATE THIS FUNCTION ---
+  const formatTime = (sec) => {
+    if (sec <= 0 && orderStatus !== "SERVED") return "Calculating...";
+    const mins = Math.floor(sec / 60);
+    const remainingSecs = sec % 60;
+    return `${mins}m ${remainingSecs}s`;
+  };
   const statusColors = { PLACED: "#ff6ec7", PREPARING: "#d16ba5", READY: "#b185db", SERVED: "#845ec2" };
   const progressWidth = ((["PLACED", "PREPARING", "READY", "SERVED"].indexOf(orderStatus) + 1) / 4) * 100;
 
