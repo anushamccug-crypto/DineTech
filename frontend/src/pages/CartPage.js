@@ -7,161 +7,220 @@ function CartPage() {
   const [tableNumber, setTableNumber] = useState("");
   const navigate = useNavigate();
 
-  // Load cart from localStorage on mount
+  // Load cart
   useEffect(() => {
     const savedCart = JSON.parse(localStorage.getItem("cart")) || [];
     setCart(savedCart);
   }, []);
 
-  // Sync cart to localStorage whenever it changes
+  // Sync cart
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
   const addQty = (dish) => {
-    setCart(cart.map(i =>
-      i.dish._id === dish._id ? { ...i, quantity: i.quantity + 1 } : i
-    ));
+    setCart(
+      cart.map((i) =>
+        i.dish._id === dish._id
+          ? { ...i, quantity: i.quantity + 1 }
+          : i
+      )
+    );
   };
 
   const decreaseQty = (id) => {
-    setCart(cart.map(i =>
-      i.dish._id === id ? { ...i, quantity: i.quantity - 1 } : i
-    ).filter(i => i.quantity > 0));
+    setCart(
+      cart
+        .map((i) =>
+          i.dish._id === id
+            ? { ...i, quantity: i.quantity - 1 }
+            : i
+        )
+        .filter((i) => i.quantity > 0)
+    );
   };
 
   const removeItem = (id) => {
-    setCart(cart.filter(i => i.dish._id !== id));
+    setCart(cart.filter((i) => i.dish._id !== id));
   };
 
-  const totalPrice = cart.reduce((sum, item) => sum + item.dish.price * item.quantity, 0);
+  const totalPrice = cart.reduce(
+    (sum, item) => sum + item.dish.price * item.quantity,
+    0
+  );
 
   const proceedToBill = () => {
-    // Insights from Vercel version: Simplified validation and specific state clearing
-    if (!customerName.trim()) return alert("Enter customer name");
-    if (!tableNumber.trim()) return alert("Enter table number");
-    if (cart.length === 0) return alert("Your cart is empty");
+    if (!customerName.trim()) {
+      alert("Enter customer name");
+      return;
+    }
 
-    // Map cart to the format expected by the backend/bill page
-    const cleanCart = cart.map(i => ({
+    if (!tableNumber || tableNumber < 1 || tableNumber > 30) {
+      alert("Enter a valid table number (1–30)");
+      return;
+    }
+
+    if (cart.length === 0) {
+      alert("Your cart is empty");
+      return;
+    }
+
+    const cleanCart = cart.map((i) => ({
       dishId: i.dish._id,
       name: i.dish.name,
       price: i.dish.price,
       quantity: i.quantity,
     }));
 
-    // Save to pending storage for Bill generation
     localStorage.setItem("pendingCustomer", customerName);
-    localStorage.setItem("pendingTable", String(tableNumber)); 
+    localStorage.setItem("pendingTable", String(tableNumber));
     localStorage.setItem("pendingCart", JSON.stringify(cleanCart));
     localStorage.setItem("pendingTotal", totalPrice);
 
-    // Reset local states
     setCart([]);
     setCustomerName("");
     setTableNumber("");
     localStorage.removeItem("cart");
 
-    // Route to bill
     navigate("/bill");
   };
 
   return (
-    <div className="min-h-screen bg-[#FDF8F2] relative overflow-hidden font-sans text-gray-800 p-4 flex items-center justify-center">
-      
-      {/* 🎨 ELEGANT AMBIENT BACKGROUND */}
-      <div className="absolute top-[-10%] left-[-5%] w-[70%] h-[50%] bg-[#E6F3EF] rounded-full blur-[120px] opacity-60 z-0"></div>
-      <div className="absolute bottom-[-10%] right-[-5%] w-[60%] h-[50%] bg-[#FFF0F0] rounded-full blur-[120px] opacity-60 z-0"></div>
+    <div className="min-h-screen bg-[#FDF8F2] flex items-center justify-center p-4">
 
-      {/* 🛑 Main UI Container */}
-      <div className="relative z-10 w-full max-w-2xl bg-white/80 backdrop-blur-3xl p-6 md:p-8 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-[3px] border-[#5D534A]">
-        
-        {/* HEADER */}
-        <div className="text-center mb-6 border-b border-[#F1E9E0] pb-4">
-          <h1 className="text-3xl font-serif italic text-[#5D534A] tracking-tighter">Your Selection</h1>
-          <p className="text-[9px] uppercase tracking-[0.2em] text-[#D4A373] font-black mt-1">DineTech Experience</p>
+      <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-xl border border-[#5D534A]">
+
+        {/* Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-serif italic text-[#5D534A]">
+            Your Selection
+          </h1>
         </div>
 
-        {/* INPUT SECTION */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-[#FAF7F2] p-5 rounded-2xl border border-[#F1E9E0]">
-          <div className="md:col-span-2 group">
-            <label className="text-[8px] font-black text-gray-400 uppercase ml-3 tracking-widest group-focus-within:text-[#D4A373]">Guest Name</label>
+        {/* Customer Inputs */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+          <div className="md:col-span-2">
+            <label className="text-xs font-bold text-gray-500">
+              Guest Name
+            </label>
             <input
               type="text"
-              placeholder="Full name"
               value={customerName}
-              onChange={e => setCustomerName(e.target.value)}
-              className="w-full bg-white border border-[#5D534A] rounded-xl px-4 py-2.5 outline-none focus:border-[#D4A373] transition-all text-sm"
+              onChange={(e) => setCustomerName(e.target.value)}
+              className="w-full border rounded-lg px-4 py-2"
+              placeholder="Enter name"
             />
           </div>
-          <div className="group">
-            <label className="text-[8px] font-black text-gray-400 uppercase ml-3 tracking-widest group-focus-within:text-[#D4A373]">Table</label>
+
+          <div>
+            <label className="text-xs font-bold text-gray-500">
+              Table
+            </label>
             <input
-              type="text" 
-              placeholder="00"
+              type="number"
+              min="1"
+              max="30"
               value={tableNumber}
-              onChange={e => setTableNumber(e.target.value)}
-              className="w-full bg-white border border-[#5D534A] rounded-xl px-4 py-2.5 outline-none focus:border-[#D4A373] transition-all text-center font-bold text-sm"
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                if (value >= 1 && value <= 30) {
+                  setTableNumber(value);
+                } else if (e.target.value === "") {
+                  setTableNumber("");
+                }
+              }}
+              className="w-full border rounded-lg px-4 py-2"
+              placeholder="1‑30"
             />
           </div>
+
         </div>
 
-        {/* CART ITEMS */}
-        <div className="space-y-3 max-h-[35vh] overflow-y-auto pr-2 no-scrollbar mb-6">
+        {/* Cart Items */}
+        <div className="space-y-3 max-h-[300px] overflow-y-auto mb-6">
+
           {cart.length > 0 ? (
-            cart.map(item => (
-              <div key={item.dish._id} className="flex justify-between items-center bg-[#FAF7F2] p-4 rounded-2xl border border-[#F1E9E0]">
-                <div className="flex flex-col flex-1">
-                  <h3 className="font-serif text-lg text-[#4A423B] leading-tight">{item.dish.name}</h3>
-                  <p className="text-[#D4A373] font-bold text-sm mt-0.5">₹{item.dish.price}</p>
-                </div>
-                
-                <div className="flex gap-3 items-center bg-white px-2 py-1.5 rounded-xl border border-[#5D534A]">
-                  <button onClick={() => decreaseQty(item.dish._id)} className="w-6 h-6 flex items-center justify-center text-[#5D534A] font-bold text-sm hover:text-[#D4A373] transition-colors">-</button>
-                  <span className="font-black text-[#5D534A] min-w-[15px] text-center text-sm">{item.quantity}</span>
-                  <button onClick={() => addQty(item.dish)} className="w-6 h-6 flex items-center justify-center text-[#5D534A] font-bold text-sm hover:text-[#D4A373] transition-colors">+</button>
+            cart.map((item) => (
+              <div
+                key={item.dish._id}
+                className="flex justify-between items-center border p-4 rounded-xl"
+              >
+
+                <div>
+                  <h3 className="font-semibold">{item.dish.name}</h3>
+                  <p className="text-[#D4A373] font-bold">
+                    ₹{item.dish.price}
+                  </p>
                 </div>
 
-                <button onClick={() => removeItem(item.dish._id)} className="text-[9px] font-black text-red-400 hover:text-red-600 uppercase tracking-widest ml-4 transition-colors">✕</button>
+                <div className="flex items-center gap-3">
+
+                  <button
+                    onClick={() => decreaseQty(item.dish._id)}
+                    className="px-2 font-bold"
+                  >
+                    -
+                  </button>
+
+                  <span>{item.quantity}</span>
+
+                  <button
+                    onClick={() => addQty(item.dish)}
+                    className="px-2 font-bold"
+                  >
+                    +
+                  </button>
+
+                </div>
+
+                <button
+                  onClick={() => removeItem(item.dish._id)}
+                  className="text-red-500"
+                >
+                  ✕
+                </button>
+
               </div>
             ))
           ) : (
-            <div className="text-center py-8 opacity-50">
-              <p className="text-[#5D534A] text-xs italic">Your cart is currently empty.</p>
-            </div>
+            <p className="text-center text-gray-400">
+              Your cart is empty
+            </p>
           )}
+
         </div>
 
-        {/* FOOTER */}
-        <div className="bg-[#5D534A] text-white p-6 rounded-3xl border-2 border-[#F1E9E0]">
-          <div className="flex justify-between items-center mb-5 px-1">
-            <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Total Amount</span>
-            <h2 className="text-3xl font-serif italic font-bold">₹{totalPrice}</h2>
+        {/* Footer */}
+        <div className="bg-[#5D534A] text-white p-6 rounded-2xl">
+
+          <div className="flex justify-between mb-4">
+            <span>Total</span>
+            <span className="text-xl font-bold">
+              ₹{totalPrice}
+            </span>
           </div>
-          
+
           <div className="flex gap-3">
-            <button 
-               onClick={() => navigate("/menu")}
-               className="flex-1 py-3.5 rounded-xl font-bold text-[10px] uppercase tracking-widest border border-white/20 text-white/70 hover:text-white hover:border-white transition-all"
+
+            <button
+              onClick={() => navigate("/menu")}
+              className="flex-1 border border-white rounded-lg py-2"
             >
               Back
             </button>
-            <button 
-              onClick={proceedToBill} 
-              className="flex-[2] py-3.5 rounded-xl font-bold text-[10px] uppercase tracking-widest bg-white text-[#5D534A] hover:bg-[#D4A373] hover:text-white transition-all shadow-lg shadow-black/10 active:scale-95"
+
+            <button
+              onClick={proceedToBill}
+              className="flex-1 bg-white text-[#5D534A] rounded-lg py-2 font-bold"
             >
               Confirm Order
             </button>
+
           </div>
+
         </div>
       </div>
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
-        .font-sans { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .font-serif { font-family: 'Playfair Display', serif; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-      `}</style>
     </div>
   );
 }
