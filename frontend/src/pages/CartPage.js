@@ -6,6 +6,7 @@ function CartPage() {
   const [customerName, setCustomerName] = useState("");
   const [tableNumber, setTableNumber] = useState("");
   const navigate = useNavigate();
+  const [bookedTables, setBookedTables] = useState([]);
 
   // Load cart
   useEffect(() => {
@@ -17,6 +18,13 @@ function CartPage() {
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
+
+  useEffect(() => {
+  fetch("http://localhost:5000/api/orders/active-tables")
+    .then(res => res.json())
+    .then(data => setBookedTables(data))
+    .catch(err => console.error(err));
+}, []);
 
   const addQty = (dish) => {
     setCart(
@@ -56,10 +64,14 @@ function CartPage() {
     }
 
     if (!tableNumber || tableNumber < 1 || tableNumber > 30) {
-      alert("Enter a valid table number (1–30)");
-      return;
-    }
+  alert("Enter valid table (1–30)");
+  return;
+}
 
+if (bookedTables.includes(String(tableNumber))) {
+  alert("⚠️ Table already occupied!");
+  return;
+}
     if (cart.length === 0) {
       alert("Your cart is empty");
       return;

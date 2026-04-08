@@ -20,6 +20,20 @@ router.post("/confirm-payment", async (req, res) => {
     // Logic: If it's Razorpay or QR, mark as Success. If Cash, leave as Pending.
     const isPaid = (method === "RAZORPAY" || method === "QR");
 
+    // ❗ Check if table already active
+if (tableNumber) {
+  const existingOrder = await Order.findOne({
+    tableNumber,
+    status: { $ne: "SERVED" } // still active
+  });
+
+  if (existingOrder) {
+    return res.status(400).json({
+      message: `Table ${tableNumber} is already occupied`
+    });
+  }
+}
+
     const newOrder = new Order({
       customerName,
       tableNumber: tableNumber || "N/A",
@@ -145,7 +159,6 @@ UPDATE ORDER STATUS (KITCHEN CONTROL)
 
 router.put("/:id/status", async (req, res) => {
   try {
-
     const { status } = req.body;
 
     const updatedOrder = await Order.findByIdAndUpdate(
@@ -159,6 +172,21 @@ router.put("/:id/status", async (req, res) => {
     }
 
     res.json(updatedOrder);
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/active-tables", async (req, res) => {
+  try {
+    const activeOrders = await Order.find({
+      status: { $ne: "SERVED" } // NOT served yet
+    });
+
+    const bookedTables = activeOrders.map(o => o.tableNumber);
+
+    res.json(bookedTables);
 
   } catch (error) {
     res.status(500).json({ message: error.message });

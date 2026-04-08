@@ -112,8 +112,11 @@ function CustomerMenu() {
 
   // ================= FILTERING & SORTING =================
   const filteredDishes = useMemo(() => {
-    let res = dishes.filter(isDishInStock)
-                    .map(d => ({ ...d, dssMatch: calculateDSS(d) }));
+    let res = dishes.map(d => ({
+  ...d,
+  dssMatch: calculateDSS(d),
+  isAvailable: isDishInStock(d)
+}));
 
     if (searchTerm) {
       res = res.filter(d => d.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -305,7 +308,22 @@ function CustomerMenu() {
                         {restricted && alternative && (
                           <button onClick={(e) => { e.stopPropagation(); addToCart(alternative); }} className="w-full bg-[#E6F3EF] p-3 rounded-xl text-[9px] font-black text-[#2D6A4F] border border-[#CDE3DB]">💡 TRY: {alternative.name.toUpperCase()}</button>
                         )}
-                        <button disabled={restricted} onClick={(e) => { e.stopPropagation(); addToCart(dish); }} className={`w-full py-4 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all ${restricted ? "bg-gray-200 text-gray-400" : "bg-[#5D534A] text-white shadow-lg"}`}>{restricted ? "Restricted" : "Add to Order"}</button>
+                        <button
+  disabled={restricted || !dish.isAvailable}
+  onClick={(e) => {
+    e.stopPropagation();
+    addToCart(dish);
+  }}
+  className={`w-full py-4 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all ${
+    !dish.isAvailable
+      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+      : restricted
+      ? "bg-gray-200 text-gray-400"
+      : "bg-[#5D534A] text-white shadow-lg"
+  }`}
+>
+  {!dish.isAvailable ? "Currently Unavailable" : restricted ? "Restricted" : "Add to Order"}
+</button>
                       </div>
                     </div>
                   </div>
